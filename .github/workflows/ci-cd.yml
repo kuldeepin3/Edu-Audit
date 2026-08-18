@@ -1,0 +1,225 @@
+# EduAudit CI/CD Pipeline
+name: EduAudit CI/CD
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ${{ github.repository }}
+
+jobs:
+  # ========================================================================
+  # TEST BACKEND
+  # ========================================================================
+  test-backend:
+    name: "Test Backend (Python)"
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_DB: test_eduaudit
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test_pass
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U test -d test_eduaudit"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+    env:
+      DATABASE_URL: postgresql://test:test_pass@localhost:5432/test_eduaudit
+      REDIS_URL: redis://localhost:6379/0
+      QDRANT_URL: http://localhost:6333
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+
+      - name: Lint (ruff)
+        run: cd backend && ruff check app/ tests/
+
+      - name: Format check (black)
+        run: cd backend && black --check app/ tests/
+
+      - name: Type check (mypy)
+        run: cd backend && mypy app/ --ignore-missing-imports
+
+      - name: Run tests
+        run: |
+          cd backend
+          pytest tests/ -v --cov=app --cov-report=xml --cov-report=term
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          file: backend/coverage.xml
+          flags: backend
+
+  # ========================================================================
+  # TEST FRONTEND
+  # ========================================================================
+  test-frontend:
+    name: "Test Frontend (Next.js)"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: cd frontend && npm ci
+
+      - name: Lint
+        run: cd frontend && npm run lint
+
+      - name: Type check
+        run: cd frontend && npx tsc --noEmit
+
+      - name: Run tests
+        run: cd frontend && npm run test -- --coverage
+
+      - name: Build
+        run: cd frontend && npm run build
+
+  # ========================================================================
+  # SECURITY SCAN
+  # ========================================================================
+  security-scan:
+    name: "Security Scan"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '1'
+
+      - name: Python dependency audit
+        run: |
+          pip install pip-audit
+          cd backend && pip-audit -r requirements.txt
+
+  # ========================================================================
+  # BUILD & PUSH IMAGES
+  # ========================================================================
+  build-push:
+    name: "Build & Push Docker Images"
+    needs: [test-backend, test-frontend, security-scan]
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build & Push API
+        run: |
+          docker build -t ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/api:${{ github.sha }} \
+                       -t ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/api:latest ./backend
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/api:${{ github.sha }}
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/api:latest
+
+      - name: Build & Push Web
+        run: |
+          docker build -t ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/web:${{ github.sha }} \
+                       -t ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/web:latest ./frontend
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/web:${{ github.sha }}
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/web:latest
+
+  # ========================================================================
+  # DEPLOY (Staging)
+  # ========================================================================
+  deploy-staging:
+    name: "Deploy to Staging"
+    needs: build-push
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure kubectl
+        uses: azure/setup-kubectl@v3
+
+      - name: Set kubeconfig
+        run: |
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > $HOME/.kube/config
+
+      - name: Deploy API
+        run: |
+          kubectl set image deployment/eduaudit-api \
+            api=${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/api:${{ github.sha }} \
+            -n eduaudit-staging
+
+      - name: Deploy Web
+        run: |
+          kubectl set image deployment/eduaudit-web \
+            web=${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/web:${{ github.sha }} \
+            -n eduaudit-staging
+
+      - name: Wait for rollout
+        run: |
+          kubectl rollout status deployment/eduaudit-api -n eduaudit-staging --timeout=300s
+          kubectl rollout status deployment/eduaudit-web -n eduaudit-staging --timeout=300s
+
+      - name: Run smoke tests
+        run: |
+          STAGING_URL=${{ secrets.STAGING_URL }}
+          curl -sf $STAGING_URL/health | jq .
+          curl -sf $STAGING_URL/api/v1/health | jq .
+
+  # ========================================================================
+  # DEPLOY (Production) — Manual approval required
+  # ========================================================================
+  deploy-production:
+    name: "Deploy to Production"
+    needs: deploy-staging
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production  # Requires approval
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to production
+        run: |
+          echo "Deploying to production cluster..."
+          # Same kubectl deployment as staging
+          # With production namespace and values

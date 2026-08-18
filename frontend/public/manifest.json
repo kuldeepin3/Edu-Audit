@@ -1,0 +1,50 @@
+{
+  "name": "EduAudit AI - School Infrastructure Monitoring",
+  "short_name": "EduAudit AI",
+  "description": "Report and track government school infrastructure issues powered by AI",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#329fff",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "en-IN",
+  "categories": ["education", "government", "utilities"],
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Report an Issue",
+      "short_name": "Report",
+      "description": "Quickly report a school infrastructure problem",
+      "url": "/report",
+      "icons": [{ "src": "/icons/report.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Track a Report",
+      "short_name": "Track",
+      "description": "Check the status of your submitted report",
+      "url": "/track",
+      "icons": [{ "src": "/icons/track.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Ask AI Chatbot",
+      "short_name": "Chatbot",
+      "description": "Ask questions about school infrastructure",
+      "url": "/chatbot",
+      "icons": [{ "src": "/icons/chat.png", "sizes": "96x96" }]
+    }
+  ]
+}

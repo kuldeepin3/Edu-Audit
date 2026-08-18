@@ -1,0 +1,117 @@
+# EduAudit AI - Ingress Controller (NGINX)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: eduaudit-ingress
+  namespace: eduaudit
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+    nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "120"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      more_set_headers "X-Frame-Options: SAMEORIGIN";
+      more_set_headers "X-Content-Type-Options: nosniff";
+      more_set_headers "X-XSS-Protection: 1; mode=block";
+      more_set_headers "Strict-Transport-Security: max-age=31536000; includeSubDomains";
+spec:
+  tls:
+    - hosts:
+        - eduaudit.gov.in
+        - api.eduaudit.gov.in
+      secretName: eduaudit-tls
+  rules:
+    - host: eduaudit.gov.in
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: eduaudit-web
+                port:
+                  number: 3000
+    - host: api.eduaudit.gov.in
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: eduaudit-api
+                port:
+                  number: 8000
+---
+# ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: eduaudit-config
+  namespace: eduaudit
+data:
+  ENVIRONMENT: "production"
+  LOG_LEVEL: "INFO"
+  QDRANT_URL: "http://eduaudit-qdrant:6333"
+  REDIS_URL: "redis://eduaudit-redis:6379/0"
+  DATABASE_URL: "postgresql://eduaudit:CHANGE_ME@eduaudit-db:5432/eduaudit"
+  MODEL_PATH: "/app/models/yolov11_nano.pt"
+  AWS_REGION: "ap-south-1"
+  S3_BUCKET: "eduaudit-media-prod"
+---
+# Secrets (use sealed-secrets or external-secrets in production)
+apiVersion: v1
+kind: Secret
+metadata:
+  name: eduaudit-secrets
+  namespace: eduaudit
+type: Opaque
+stringData:
+  JWT_SECRET: "CHANGE_ME_USE_KMS_MANAGED"
+  AWS_ACCESS_KEY_ID: "CHANGE_ME"
+  AWS_SECRET_ACCESS_KEY: "CHANGE_ME"
+  OPENAI_API_KEY: "CHANGE_ME"
+  MSG91_AUTH_KEY: "CHANGE_ME"
+  SMTP_PASS: "CHANGE_ME"
+---
+# Models PVC (pre-trained YOLOv11 weights)
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: eduaudit-models-pvc
+  namespace: eduaudit
+spec:
+  accessModes: ["ReadWriteMany"]
+  storageClassName: nfs
+  resources:
+    requests:
+      storage: 10Gi
+---
+# Network Policy (restrict pod-to-pod communication)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: eduaudit-default-deny
+  namespace: eduaudit
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - podSelector: {}
+        - namespaceSelector:
+            matchLabels:
+              name: ingress-nginx
+  egress:
+    - to:
+        - podSelector: {}
+    - to: []
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 443
