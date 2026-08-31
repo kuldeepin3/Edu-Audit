@@ -1,8 +1,0 @@
-# EduAudit AI - Kubernetes Namespace
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: eduaudit
-  labels:
-    app.kubernetes.io/name: eduaudit
-    app.kubernetes.io/part-of: eduaudit-platform
