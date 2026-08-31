@@ -35,11 +35,11 @@ export default function AuditorLoginPage() {
 
     try {
       const data = await login(email, password);
-      if (data.user.role !== "auditor") {
-        setLocalError("Access denied. This portal is for auditor accounts only.");
+      if (data.user.role !== "auditor" && data.user.role !== "admin") {
+        setLocalError("Access denied. This portal is for auditor and administrator accounts only.");
         useAuthStore.getState().logout();
       } else {
-        router.push("/portal/dashboard");
+        router.push(data.user.role === "admin" ? "/admin/dashboard" : "/portal/dashboard");
       }
     } catch (err: any) {
       // Handled by store
