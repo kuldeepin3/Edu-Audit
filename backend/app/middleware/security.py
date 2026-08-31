@@ -37,6 +37,10 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         if request.url.path in ["/health", "/ready", "/metrics"]:
             return await call_next(request)
 
+        # Skip rate limiting in development/testing mode
+        if settings.ENVIRONMENT != "production":
+            return await call_next(request)
+
         # Get client identifier
         client_id = self._get_client_id(request)
 
@@ -159,7 +163,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             )
             response.headers["Content-Security-Policy"] = (
                 "default-src 'self'; "
-                "img-src 'self' data: blob: https://res.cloudinary.com https://*.amazonaws.com; "
+                "img-src 'self' data: blob: https://res.cloudinary.com; "
                 "script-src 'self' 'unsafe-inline'; "
                 "style-src 'self' 'unsafe-inline'; "
                 "connect-src 'self' https://api.eduaudit.gov.in wss://api.eduaudit.gov.in"
