@@ -5,6 +5,7 @@ Core citizen reporting system
 import uuid
 from typing import Optional, List
 from datetime import datetime
+from dataclasses import asdict
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Query, Form
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, and_, or_
@@ -162,7 +163,7 @@ async def create_complaint(
             thumbnail_url=img_data["thumbnail_url"],
             file_size=img_data["file_size"],
             is_primary=(i == 0),
-            detection_results=ai_results.detections if i == 0 and ai_results else [],
+            detection_results=[asdict(d) for d in ai_results.detections] if i == 0 and ai_results else [],
         )
         db.add(image)
 
