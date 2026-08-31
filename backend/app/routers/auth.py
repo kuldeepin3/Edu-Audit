@@ -84,7 +84,7 @@ async def login(request: LoginRequest, response: Response, db: AsyncSession = De
     email = request.email.lower().strip()
     
     # 1. Lockout check
-    is_locked, error_msg = check_login_lockout(email)
+    is_locked, error_msg = await check_login_lockout(email)
     if is_locked:
         raise HTTPException(
             status_code=status.HTTP_423_LOCKED,
@@ -97,7 +97,7 @@ async def login(request: LoginRequest, response: Response, db: AsyncSession = De
 
     # 3. Verify credentials
     if not user or not verify_password(request.password, user.password_hash):
-        attempts = register_failed_attempt(email)
+        attempts = await register_failed_attempt(email)
         remaining = 5 - attempts
         if remaining > 0:
             detail = f"Invalid email or password. {remaining} attempts remaining before account lock."
@@ -110,7 +110,7 @@ async def login(request: LoginRequest, response: Response, db: AsyncSession = De
         )
 
     # Reset failure counters
-    reset_failed_attempts(email)
+    await reset_failed_attempts(email)
 
     if not user.is_active:
         raise HTTPException(

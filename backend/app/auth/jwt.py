@@ -10,11 +10,7 @@ from jose import JWTError, jwt
 import bcrypt
 
 from app.config import settings
-
-# In-memory storage for login attempts (lockout security)
-# In production, this would use Redis.
-# Format: {email: {"attempts": int, "lockout_until": float}}
-login_attempts = {}
+from app.redis import redis_client
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -70,7 +66,7 @@ def set_auth_cookies(response: Response, access_token: str, refresh_token: str) 
         max_age=settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         expires=settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         samesite="lax",
-        secure=False,  # Set to True in production (requires HTTPS)
+        secure=settings.ENVIRONMENT == "production",  # Set to True in production (requires HTTPS)
         path="/"
     )
     # Refresh token cookie (7 days)
@@ -81,7 +77,7 @@ def set_auth_cookies(response: Response, access_token: str, refresh_token: str) 
         max_age=settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
         expires=settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
         samesite="lax",
-        secure=False,  # Set to True in production (requires HTTPS)
+        secure=settings.ENVIRONMENT == "production",  # Set to True in production (requires HTTPS)
         path="/"
     )
 
@@ -120,51 +116,53 @@ def get_token_payload(token: str) -> Optional[dict]:
         return None
 
 
-def check_login_lockout(email: str) -> Tuple[bool, Optional[str]]:
+async def check_login_lockout(email: str) -> Tuple[bool, Optional[str]]:
     """
-    Check if a user is locked out from logging in.
+    Check if a user is locked out from logging in via Redis.
     Returns: (is_locked, error_message)
     """
-    now = time.time()
-    record = login_attempts.get(email)
-    
-    if record:
-        lockout_until = record.get("lockout_until")
-        if lockout_until and now < lockout_until:
-            remaining_seconds = int(lockout_until - now)
-            minutes = remaining_seconds // 60
-            seconds = remaining_seconds % 60
+    try:
+        lockout_key = f"auth:lockout:{email}"
+        ttl = await redis_client.ttl(lockout_key)
+        if ttl > 0:
+            minutes = ttl // 60
+            seconds = ttl % 60
             time_str = f"{minutes}m {seconds}s" if minutes > 0 else f"{seconds}s"
             return True, f"Account temporarily locked due to too many failed attempts. Try again in {time_str}."
-            
-        # Lockout period expired: reset record
-        if lockout_until and now >= lockout_until:
-            login_attempts.pop(email, None)
-            
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"Redis lockout check failed: {e}")
     return False, None
 
 
-def register_failed_attempt(email: str) -> int:
-    """Register a failed login attempt and set lockout if attempts exceed 5"""
-    now = time.time()
-    record = login_attempts.get(email)
-    
-    if not record:
-        login_attempts[email] = {"attempts": 1, "lockout_until": None}
+async def register_failed_attempt(email: str) -> int:
+    """Register a failed login attempt and set lockout if attempts exceed 5 in Redis"""
+    try:
+        attempts_key = f"auth:attempts:{email}"
+        attempts = await redis_client.incr(attempts_key)
+        
+        # Set expiry for attempts tracking on first failed attempt
+        if attempts == 1:
+            await redis_client.expire(attempts_key, 15 * 60)
+            
+        if attempts >= 5:
+            lockout_key = f"auth:lockout:{email}"
+            await redis_client.set(lockout_key, "1", ex=15 * 60)
+            await redis_client.delete(attempts_key)
+            import logging
+            logging.getLogger(__name__).warning(f"[SECURITY] Account {email} locked out for 15 minutes.")
+            
+        return attempts
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"Redis register failed attempt failed: {e}")
         return 1
-        
-    attempts = record["attempts"] + 1
-    record["attempts"] = attempts
-    
-    if attempts >= 5:
-        # Lockout for 15 minutes
-        record["lockout_until"] = now + 15 * 60
-        logger_info = f"[SECURITY] Account {email} locked out for 15 minutes."
-        print(logger_info)
-        
-    return attempts
 
 
-def reset_failed_attempts(email: str) -> None:
-    """Reset failed login attempts for a user upon successful login"""
-    login_attempts.pop(email, None)
+async def reset_failed_attempts(email: str) -> None:
+    """Reset failed login attempts for a user upon successful login in Redis"""
+    try:
+        await redis_client.delete(f"auth:attempts:{email}", f"auth:lockout:{email}")
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"Redis reset failed attempts failed: {e}")

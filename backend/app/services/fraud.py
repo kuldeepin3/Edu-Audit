@@ -12,6 +12,8 @@ import imagehash
 from PIL import Image
 import numpy as np
 
+from app.redis import redis_client
+
 logger = logging.getLogger(__name__)
 
 
@@ -39,10 +41,7 @@ class FraudDetector:
         self.hash_threshold = 5  # Hamming distance for pHash
         self.clip_threshold = 0.92  # Cosine similarity for CLIP
         self.ela_threshold = 0.3  # ELA score for edited images
-
-        # In-memory hash store (use Redis in production)
-        self._phash_store: dict = {}  # phash -> report_id
-        # In production: self.redis = Redis(settings.REDIS_URL)
+        self.redis = redis_client
 
     async def full_check(self, image_bytes: bytes, report_id: str = None) -> FraudResult:
         """
@@ -64,7 +63,7 @@ class FraudDetector:
         # Layer 1: Perceptual Hash (instant)
         checks.append("perceptual_hash")
         p_hash = imagehash.phash(img)
-        similar = self._find_similar_phash(p_hash)
+        similar = await self._find_similar_phash(p_hash)
         if similar:
             return FraudResult(
                 is_fraud=True,
@@ -108,7 +107,7 @@ class FraudDetector:
 
         # Store hash for future checks
         if report_id:
-            self._store_phash(p_hash, report_id)
+            await self._store_phash(p_hash, report_id)
 
         return FraudResult(
             is_fraud=False,
@@ -116,22 +115,29 @@ class FraudDetector:
             checks_performed=checks,
         )
 
-    def _find_similar_phash(self, phash, threshold: int = None) -> Optional[str]:
-        """Check if similar perceptual hash exists"""
+    async def _find_similar_phash(self, phash, threshold: int = None) -> Optional[str]:
+        """Check if similar perceptual hash exists in Redis"""
         threshold = threshold or self.hash_threshold
-        for stored_hash, report_id in self._phash_store.items():
-            try:
-                # stored_hash is hex string, convert to ImageHash
-                stored_hash_obj = imagehash.hex_to_hash(stored_hash)
-                if phash - stored_hash_obj < threshold:
-                    return report_id
-            except Exception as e:
-                logger.error(f"Error decoding hex hash '{stored_hash}': {e}")
+        try:
+            all_hashes = await self.redis.hgetall("fraud:phashes")
+            for stored_hash, report_id in all_hashes.items():
+                try:
+                    # stored_hash is hex string, convert to ImageHash
+                    stored_hash_obj = imagehash.hex_to_hash(stored_hash)
+                    if phash - stored_hash_obj < threshold:
+                        return report_id
+                except Exception as e:
+                    logger.error(f"Error decoding hex hash '{stored_hash}': {e}")
+        except Exception as e:
+            logger.error(f"Redis fetch for duplicate hashes failed: {e}")
         return None
 
-    def _store_phash(self, phash, report_id: str):
-        """Store perceptual hash for future duplicate checks"""
-        self._phash_store[str(phash)] = report_id
+    async def _store_phash(self, phash, report_id: str):
+        """Store perceptual hash for future duplicate checks in Redis"""
+        try:
+            await self.redis.hset("fraud:phashes", str(phash), report_id)
+        except Exception as e:
+            logger.error(f"Redis store hash failed: {e}")
 
     def _analyze_exif(self, img: Image.Image) -> dict:
         """
