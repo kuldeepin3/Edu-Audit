@@ -1,14 +1,11 @@
-"""
-EduAudit AI - Storage Service
-AWS S3 + Cloudinary for media storage
-"""
+"""Local media storage and optional Cloudinary thumbnail support."""
 import io
-import uuid
 import logging
+from pathlib import Path, PurePosixPath
 from typing import Optional
+from urllib.parse import quote
 
-import boto3
-from botocore.exceptions import ClientError
+import aiofiles
 
 from app.config import settings
 
@@ -16,69 +13,29 @@ logger = logging.getLogger(__name__)
 
 
 class StorageService:
-    """Manages file uploads to AWS S3 and Cloudinary"""
+    """Stores uploaded files locally and optionally creates Cloudinary thumbnails."""
 
     def __init__(self):
-        self.s3_client = None
-        self._init_s3()
+        self.media_root = Path(settings.MEDIA_STORAGE_PATH).resolve()
 
-    def _init_s3(self):
-        """Initialize S3 client"""
-        try:
-            self.s3_client = boto3.client(
-                "s3",
-                aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-                aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-                region_name=settings.AWS_REGION,
-            )
-            logger.info("S3 client initialized")
-        except Exception as e:
-            logger.error(f"Failed to initialize S3 client: {e}")
-
-    async def upload_to_s3(
+    async def upload(
         self, file_bytes: bytes, key: str, content_type: str = "image/jpeg"
     ) -> Optional[str]:
-        """Upload file to S3 and return public URL"""
-        if not self.s3_client:
-            logger.warning("S3 not configured, returning mock URL")
-            return f"https://{settings.S3_BUCKET}.s3.amazonaws.com/{key}"
+        """Write a file inside the local media directory and return its API URL."""
+        relative_path = PurePosixPath(key)
+        if relative_path.is_absolute() or ".." in relative_path.parts:
+            raise ValueError("Invalid media storage key")
 
-        try:
-            self.s3_client.put_object(
-                Bucket=settings.S3_BUCKET,
-                Key=key,
-                Body=file_bytes,
-                ContentType=content_type,
-                # AES-256 server-side encryption
-                ServerSideEncryption="AES256",
-            )
-            url = f"https://{settings.S3_BUCKET}.s3.{settings.AWS_REGION}.amazonaws.com/{key}"
-            return url
-        except Exception as e:
-            logger.error(f"S3 upload failed: {e}. Returning fallback mock URL.")
-            return f"https://{settings.S3_BUCKET}.s3.amazonaws.com/{key}"
+        destination = (self.media_root / Path(*relative_path.parts)).resolve()
+        if self.media_root not in destination.parents:
+            raise ValueError("Invalid media storage key")
 
-    async def upload_to_cloudinary(
-        self, file_bytes: bytes, folder: str = "eduaudit"
-    ) -> Optional[str]:
-        """Upload to Cloudinary for CDN + transformations"""
-        if not settings.CLOUDINARY_URL:
-            return None
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        async with aiofiles.open(destination, "wb") as media_file:
+            await media_file.write(file_bytes)
 
-        try:
-            import cloudinary
-            import cloudinary.uploader
-
-            cloudinary.config(cloud_name=settings.CLOUDINARY_CLOUD_NAME)
-            result = cloudinary.uploader.upload(
-                io.BytesIO(file_bytes),
-                folder=folder,
-                transformation=[{"width": 800, "crop": "limit"}],
-            )
-            return result.get("secure_url")
-        except Exception as e:
-            logger.error(f"Cloudinary upload failed: {e}")
-            return None
+        media_url = settings.MEDIA_URL.rstrip("/")
+        return f"{media_url}/{quote(relative_path.as_posix(), safe='/')}"
 
     async def generate_thumbnail(self, file_bytes: bytes, size: tuple = (200, 200)) -> bytes:
         """Generate thumbnail from image"""
@@ -99,9 +56,5 @@ class StorageService:
 storage = StorageService()
 
 
-async def upload_to_s3(file_bytes: bytes, key: str, content_type: str = "image/jpeg") -> Optional[str]:
-    return await storage.upload_to_s3(file_bytes, key, content_type)
-
-
-async def upload_to_cloudinary(file_bytes: bytes, folder: str = "eduaudit") -> Optional[str]:
-    return await storage.upload_to_cloudinary(file_bytes, folder)
+async def upload(file_bytes: bytes, key: str, content_type: str = "image/jpeg") -> Optional[str]:
+    return await storage.upload(file_bytes, key, content_type)

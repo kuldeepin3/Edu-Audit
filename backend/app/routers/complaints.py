@@ -20,7 +20,7 @@ from app.schemas import (
     ComplaintResponse, ComplaintListResponse,
     ComplaintUpdate, ReportTrackingResponse
 )
-from app.services.storage import upload_to_s3, upload_to_cloudinary
+from app.services.storage import upload, storage
 from app.services.vision import analyze_image
 from app.services.fraud import check_fraud
 from app.services.report_generator import generate_auto_report
@@ -93,14 +93,15 @@ async def create_complaint(
             )
 
         # Upload to storage
-        image_url = await upload_to_s3(image_bytes, f"complaints/{report_id}/image_{i}.jpg")
-        thumbnail_url = await upload_to_cloudinary(
-            image_bytes, f"eduaudit/{report_id}/thumb_{i}"
-        )
+        image_url = await upload(image_bytes, f"complaints/{report_id}/image_{i}.jpg")
+        
+        # Generate and save thumbnail locally
+        thumb_bytes = await storage.generate_thumbnail(image_bytes)
+        thumbnail_url = await upload(thumb_bytes, f"complaints/{report_id}/thumb_{i}.jpg")
 
         uploaded_images.append({
-            "s3_url": image_url,
-            "cloudinary_url": thumbnail_url,
+            "storage_url": image_url,
+            "thumbnail_url": thumbnail_url,
             "file_size": len(image_bytes),
         })
 
@@ -156,9 +157,9 @@ async def create_complaint(
     for i, img_data in enumerate(uploaded_images):
         image = Image(
             complaint_id=complaint.id,
-            s3_url=img_data["s3_url"],
-            cloudinary_url=img_data["cloudinary_url"],
-            thumbnail_url=img_data["cloudinary_url"],
+            media_url=img_data["storage_url"],
+            cloudinary_url=None,
+            thumbnail_url=img_data["thumbnail_url"],
             file_size=img_data["file_size"],
             is_primary=(i == 0),
             detection_results=ai_results.detections if i == 0 and ai_results else [],

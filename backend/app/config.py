@@ -31,15 +31,11 @@ class Settings(BaseSettings):
     JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
     JWT_REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
-    # AWS S3
-    AWS_ACCESS_KEY_ID: str = ""
-    AWS_SECRET_ACCESS_KEY: str = ""
-    AWS_REGION: str = "ap-south-1"
-    S3_BUCKET: str = "eduaudit-media"
+    # Local media storage
+    MEDIA_STORAGE_PATH: str = "uploads"
+    MEDIA_URL: str = "/media"
 
-    # Cloudinary
-    CLOUDINARY_URL: str = ""
-    CLOUDINARY_FOLDER: str = "eduaudit"
+
 
     # AI Models
     MODEL_PATH: str = "models/yolov11_nano.pt"
@@ -77,6 +73,7 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         case_sensitive = True
+        extra = "ignore"
 
 
 settings = Settings()
