@@ -8,7 +8,7 @@ export function HowItWorks() {
       icon: "📸",
       title: "Capture & Report",
       description:
-        "Citizens photograph infrastructure issues via the web app, WhatsApp, or SMS. Choose category, add GPS, submit in seconds.",
+        "Citizens photograph infrastructure issues via the web app. Choose category, add GPS, submit in seconds.",
     },
     {
       number: "02",

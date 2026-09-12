@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Hero } from "@/components/home/hero";
-import { Stats } from "@/components/home/stats";
 import { FeatureGrid } from "@/components/home/feature-grid";
 import { HowItWorks } from "@/components/home/how-it-works";
 
@@ -9,8 +8,6 @@ export default function HomePage() {
   return (
     <div className="flex flex-col">
       <Hero />
-
-      <Stats />
 
       <FeatureGrid />
 

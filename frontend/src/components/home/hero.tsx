@@ -51,16 +51,8 @@ export function Hero() {
               <span>AI-Powered Detection</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-xl">📱</span>
-              <span>WhatsApp & SMS Support</span>
-            </div>
-            <div className="flex items-center gap-2">
               <span className="text-xl">🔒</span>
               <span>Anonymous Reporting</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xl">🌐</span>
-              <span>22 Indian Languages</span>
             </div>
           </div>
         </div>
