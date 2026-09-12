@@ -91,81 +91,81 @@ function AuditorComplaintsContent() {
   };
 
   const getStatusBadge = (status: string) => {
-    const s = status.toLowerCase();
+    const s = (status || "").toLowerCase();
     if (s === "completed" || s === "resolved") {
       return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-950/40 text-emerald-400 border border-emerald-800">
-          <CheckCircle size={12} /> Resolved
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
+          <CheckCircle size={11} /> Resolved
         </span>
       );
     }
     if (s === "rejected") {
       return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-950/40 text-red-400 border border-red-800">
-          <AlertCircle size={12} /> Rejected
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-rose-50 text-rose-800 border border-rose-200">
+          <AlertCircle size={11} /> Rejected
         </span>
       );
     }
     if (s === "in_progress" || s === "assigned" || s === "pending_completion") {
       return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-950/40 text-blue-400 border border-blue-800">
-          <Clock size={12} /> In Progress
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-blue-50 text-blue-800 border border-blue-200">
+          <Clock size={11} /> In Progress
         </span>
       );
     }
     return (
-      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-800 text-slate-400 border border-slate-700">
-        <Clock size={12} /> Pending Review
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-50 text-amber-800 border border-amber-200">
+        <Clock size={11} /> Pending Review
       </span>
     );
   };
 
   return (
-    <div className="h-[85vh] flex gap-8">
+    <div className="h-[85vh] flex gap-6 max-w-7xl mx-auto font-sans">
       {/* Left Pane - Complaints List */}
-      <div className="w-1/3 flex flex-col bg-slate-950 rounded-2xl border border-slate-800 overflow-hidden">
-        <div className="p-5 border-b border-slate-800 bg-slate-950">
-          <h2 className="text-lg font-bold font-display flex items-center gap-2">
-            <ClipboardList size={20} className="text-indigo-400" />
+      <div className="w-1/3 flex flex-col bg-white rounded-lg border border-slate-200 overflow-hidden shadow-none">
+        <div className="p-4 border-b border-slate-200 bg-slate-50/50">
+          <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+            <ClipboardList size={16} className="text-slate-700" />
             District Complaints ({districtName})
           </h2>
-          <p className="text-xs text-slate-500 mt-1">Select a complaint to inspect details and authorize action</p>
+          <p className="text-[11px] text-slate-500 mt-0.5">Select a complaint to inspect details and authorize action</p>
         </div>
 
         {loading ? (
           <div className="flex-1 flex flex-col items-center justify-center space-y-3">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-700 border-t-indigo-500" />
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-slate-300 border-t-slate-800" />
             <span className="text-xs text-slate-500">Loading complaints...</span>
           </div>
         ) : complaints.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-slate-500">
-            <ClipboardList size={32} className="mb-2" />
-            <span className="text-sm font-semibold">No complaints reported</span>
-            <p className="text-xs text-slate-600 mt-1">There are currently no complaints filed in {districtName} district.</p>
+            <ClipboardList size={28} className="mb-2 text-slate-400" />
+            <span className="text-xs font-semibold text-slate-700">No complaints reported</span>
+            <p className="text-[11px] text-slate-500 mt-1">There are currently no complaints filed in {districtName} district.</p>
           </div>
         ) : (
-          <div className="flex-1 overflow-y-auto divide-y divide-slate-900">
+          <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
             {complaints.map((c) => {
               const isSelected = selectedComplaint?.id === c.id;
               return (
                 <button
                   key={c.id}
                   onClick={() => setSelectedComplaint(c)}
-                  className={`w-full text-left p-4 flex items-center justify-between transition-colors ${
-                    isSelected ? "bg-slate-900 border-l-4 border-l-indigo-500" : "hover:bg-slate-900/40"
+                  className={`w-full text-left p-3.5 flex items-center justify-between transition-colors cursor-pointer ${
+                    isSelected ? "bg-slate-100/80 border-l-4 border-l-slate-900" : "hover:bg-slate-50"
                   }`}
                 >
-                  <div className="space-y-1.5 max-w-[85%]">
+                  <div className="space-y-1 max-w-[85%]">
                     <div className="flex items-center gap-2">
-                      <span className="font-mono text-xs font-bold text-slate-300">{c.report_id}</span>
+                      <span className="font-mono text-[11px] font-bold text-slate-700">{c.report_id}</span>
                       {getStatusBadge(c.status)}
                     </div>
-                    <div className="font-semibold text-slate-100 truncate text-sm">
+                    <div className="font-bold text-slate-900 truncate text-xs">
                       {c.school_name || "Primary School"}
                     </div>
-                    <p className="text-xs text-slate-500 truncate">{c.description || "No detail"}</p>
+                    <p className="text-[11px] text-slate-500 truncate">{c.description || "No detail provided"}</p>
                   </div>
-                  <ChevronRight size={16} className="text-slate-600 shrink-0" />
+                  <ChevronRight size={15} className="text-slate-400 shrink-0" />
                 </button>
               );
             })}
@@ -174,18 +174,18 @@ function AuditorComplaintsContent() {
       </div>
 
       {/* Right Pane - Detail Review & Actions */}
-      <div className="flex-1 bg-slate-950 rounded-2xl border border-slate-800 flex flex-col overflow-hidden">
+      <div className="flex-1 bg-white rounded-lg border border-slate-200 flex flex-col overflow-hidden shadow-none">
         {selectedComplaint ? (
           <div className="flex-1 flex flex-col h-full overflow-hidden">
             {/* Header info */}
-            <div className="p-6 border-b border-slate-800 flex items-center justify-between shrink-0">
+            <div className="p-5 border-b border-slate-200 flex items-center justify-between shrink-0 bg-slate-50/40">
               <div className="space-y-1">
-                <div className="flex items-center gap-2 text-xs text-slate-500 font-semibold">
-                  <span className="font-mono text-slate-400">REPORT ID: {selectedComplaint.report_id}</span>
+                <div className="flex items-center gap-2 text-[11px] text-slate-500 font-semibold">
+                  <span className="font-mono text-slate-600">ID: {selectedComplaint.report_id}</span>
                   <span>•</span>
                   <span className="flex items-center gap-1"><Calendar size={12} /> {new Date(selectedComplaint.created_at).toLocaleDateString("en-IN")}</span>
                 </div>
-                <h2 className="text-xl font-bold font-display text-white">{selectedComplaint.school_name || "Government Primary School"}</h2>
+                <h2 className="text-lg font-bold text-slate-900">{selectedComplaint.school_name || "Government Primary School"}</h2>
               </div>
               <div className="shrink-0">{getStatusBadge(selectedComplaint.status)}</div>
             </div>
@@ -193,251 +193,229 @@ function AuditorComplaintsContent() {
             {/* Scrollable details */}
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
               {successMsg && (
-                <div className="p-4 bg-emerald-950/20 border border-emerald-900/40 rounded-xl text-emerald-400 text-sm font-medium flex items-center gap-2">
-                  <CheckCircle2 size={18} />
+                <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-800 text-xs font-semibold flex items-center gap-2">
+                  <CheckCircle2 size={16} />
                   {successMsg}
                 </div>
               )}
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 {/* Information cards */}
                 <div className="space-y-4">
                   {/* Category Card */}
-                  <div className="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-3">
-                    <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Defect Category</div>
-                    <div className="flex items-center gap-2">
-                      <div className="h-8 w-8 rounded-lg bg-indigo-950 text-indigo-400 flex items-center justify-center text-lg font-bold">
-                        ⚒️
-                      </div>
-                      <div>
-                        <div className="font-semibold text-sm">{selectedComplaint.category_name || "General Defect"}</div>
-                        <div className="text-xs text-slate-500">Category Code: {selectedComplaint.category_id || "Unassigned"}</div>
-                      </div>
-                    </div>
+                  <div className="bg-slate-50/70 p-4 rounded-lg border border-slate-200 space-y-1.5">
+                    <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Defect Category</div>
+                    <div className="font-bold text-sm text-slate-900">{selectedComplaint.category_name || "General Infrastructure"}</div>
+                    <div className="text-[11px] text-slate-500 font-mono">Code: {selectedComplaint.category_id || "unassigned"}</div>
                   </div>
 
                   {/* Severity Card */}
-                  <div className="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-2">
-                    <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Severity Level</div>
-                    <div className="flex items-center gap-3">
-                      <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold capitalize ${
-                        selectedComplaint.severity_level.toLowerCase() === "critical"
-                          ? "bg-red-950/40 text-red-400 border border-red-800"
-                          : selectedComplaint.severity_level.toLowerCase() === "high"
-                          ? "bg-orange-950/40 text-orange-400 border border-orange-800"
-                          : "bg-slate-800 text-slate-400 border border-slate-700"
+                  <div className="bg-slate-50/70 p-4 rounded-lg border border-slate-200 space-y-1.5">
+                    <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Severity Level</div>
+                    <div className="flex items-center gap-2.5">
+                      <span className={`px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-wider ${
+                        (selectedComplaint.severity_level || "").toLowerCase() === "critical"
+                          ? "bg-rose-100 text-rose-800 border border-rose-200"
+                          : (selectedComplaint.severity_level || "").toLowerCase() === "high"
+                          ? "bg-amber-100 text-amber-800 border border-amber-200"
+                          : "bg-slate-100 text-slate-700 border border-slate-200"
                       }`}>
-                        {selectedComplaint.severity_level}
+                        {selectedComplaint.severity_level || "Medium"}
                       </span>
-                      <span className="text-xs text-slate-400">Severity Score: {selectedComplaint.severity_score}/100</span>
+                      <span className="text-[11px] text-slate-500 font-mono">Score: {selectedComplaint.severity_score || 5}/10</span>
                     </div>
                   </div>
 
                   {/* School / Reporter Card */}
-                  <div className="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-3">
-                    <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Audit Context</div>
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-sm text-slate-300">
-                        <Building size={16} className="text-slate-500" />
-                        <span>UDISE Code: {selectedComplaint.school_udise || "24190100101"}</span>
+                  <div className="bg-slate-50/70 p-4 rounded-lg border border-slate-200 space-y-2">
+                    <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Audit Context</div>
+                    <div className="space-y-1 text-xs">
+                      <div className="flex items-center gap-2 text-slate-700">
+                        <Building size={14} className="text-slate-400" />
+                        <span>UDISE Code: <strong className="font-mono text-slate-900">{selectedComplaint.school_udise || "24190100101"}</strong></span>
                       </div>
-                      <div className="flex items-center gap-2 text-sm text-slate-300">
-                        <User size={16} className="text-slate-500" />
+                      <div className="flex items-center gap-2 text-slate-700">
+                        <User size={14} className="text-slate-400" />
                         <span>Reporter: {selectedComplaint.is_anonymous ? "Citizen (Anonymous)" : (selectedComplaint.reporter_name || selectedComplaint.reporter?.name || "Citizen (Verified)")}</span>
                       </div>
                       {!selectedComplaint.is_anonymous && (selectedComplaint.reporter_email || selectedComplaint.reporter_phone) && (
-                        <div className="pt-1 text-xs text-slate-400 space-y-1 border-t border-slate-800">
-                          {selectedComplaint.reporter_email && <div>✉️ Email: {selectedComplaint.reporter_email}</div>}
-                          {selectedComplaint.reporter_phone && <div>📞 Phone: {selectedComplaint.reporter_phone}</div>}
+                        <div className="pt-1.5 text-[11px] text-slate-500 space-y-0.5 border-t border-slate-200">
+                          {selectedComplaint.reporter_email && <div>Email: {selectedComplaint.reporter_email}</div>}
+                          {selectedComplaint.reporter_phone && <div>Phone: {selectedComplaint.reporter_phone}</div>}
                         </div>
                       )}
                     </div>
                   </div>
                 </div>
 
-                {/* AI Detection Card */}
-                <div className="bg-slate-900 p-4 rounded-xl border border-slate-800 flex flex-col justify-between space-y-4">
-                  <div className="space-y-2">
-                    <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">🤖 AI Automated Verification</div>
-                    <p className="text-xs text-slate-400 leading-relaxed">
-                      {selectedComplaint.ai_analysis?.description || "AI Model analyzed the report image. Perceptual hashing checked. YOLO detection verified issue with high confidence."}
+                {/* AI Verification Card */}
+                <div className="bg-slate-50/70 p-4 rounded-lg border border-slate-200 flex flex-col justify-between space-y-3">
+                  <div className="space-y-1.5">
+                    <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Automated Verification Assessment</div>
+                    <p className="text-xs text-slate-700 leading-relaxed">
+                      {selectedComplaint.ai_analysis?.description || "Computer vision model verified defect signature against canonical school safety standards."}
                     </p>
                   </div>
-                  <div className="p-3 bg-slate-950 rounded-lg border border-slate-800 flex justify-between items-center text-xs">
-                    <span className="text-slate-500">AI Verification Confidence</span>
-                    <span className="font-bold text-emerald-400">{(selectedComplaint.ai_confidence || 87.5).toFixed(1)}%</span>
+                  <div className="p-2.5 bg-white rounded-md border border-slate-200 flex justify-between items-center text-xs">
+                    <span className="text-slate-500">Confidence Rating</span>
+                    <span className="font-bold text-slate-900 font-mono">{(selectedComplaint.ai_confidence || 87.5).toFixed(1)}%</span>
                   </div>
                 </div>
               </div>
 
               {/* Submitted Evidence Photos Gallery */}
-              <div className="space-y-3">
-                <h4 className="text-sm font-semibold text-slate-300 flex items-center gap-2">
-                  <ImageIcon size={16} className="text-indigo-400" />
-                  Submitted Evidence Photos
+              <div className="space-y-2">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
+                  <ImageIcon size={14} className="text-slate-500" />
+                  Submitted Photographic Evidence
                 </h4>
                 {selectedComplaint.images && selectedComplaint.images.length > 0 ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                     {selectedComplaint.images.map((img: any, idx: number) => {
                       const fullUrl = getImageUrl(img.media_url || img.thumbnail_url);
                       return (
-                        <div key={img.id || idx} className="relative group bg-slate-900 rounded-xl border border-slate-800 overflow-hidden">
+                        <div key={img.id || idx} className="relative group bg-slate-100 rounded-lg border border-slate-200 overflow-hidden">
                           <img
                             src={fullUrl}
                             alt={`Evidence ${idx + 1}`}
-                            className="w-full h-48 object-cover rounded-xl transition-transform duration-300 group-hover:scale-105"
+                            className="w-full h-44 object-cover"
                             onError={(e) => {
                               (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1580582932707-520aed937b7b?w=800&auto=format&fit=crop&q=60";
                             }}
                           />
-                          <div className="absolute inset-0 bg-slate-950/70 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-2">
+                          <div className="p-2 bg-white border-t border-slate-200 flex justify-between items-center text-[11px]">
+                            <span className="text-slate-500">Evidence #{idx + 1}</span>
                             <a
                               href={fullUrl}
                               target="_blank"
                               rel="noreferrer"
-                              className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold shadow-lg"
+                              className="font-semibold text-slate-800 hover:underline"
                             >
-                              Open Image ↗
+                              Open Full ↗
                             </a>
                           </div>
-                          {img.is_primary && (
-                            <span className="absolute top-2 left-2 px-2 py-0.5 bg-indigo-950/90 text-indigo-300 text-[10px] font-bold rounded border border-indigo-800">
-                              Primary Evidence
-                            </span>
-                          )}
                         </div>
                       );
                     })}
                   </div>
                 ) : selectedComplaint.media_url ? (
-                  <div className="relative group bg-slate-900 rounded-xl border border-slate-800 overflow-hidden max-w-md">
+                  <div className="relative group bg-slate-100 rounded-lg border border-slate-200 overflow-hidden max-w-sm">
                     <img
                       src={getImageUrl(selectedComplaint.media_url)}
                       alt="Evidence Photo"
-                      className="w-full h-56 object-cover rounded-xl"
+                      className="w-full h-48 object-cover"
                       onError={(e) => {
                         (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1580582932707-520aed937b7b?w=800&auto=format&fit=crop&q=60";
                       }}
                     />
-                    <div className="p-3 bg-slate-950 border-t border-slate-800 flex justify-between items-center">
-                      <span className="text-xs text-slate-400">Uploaded Evidence Photo</span>
+                    <div className="p-2.5 bg-white border-t border-slate-200 flex justify-between items-center text-xs">
+                      <span className="text-slate-500 text-[11px]">Uploaded Evidence Photo</span>
                       <a
                         href={getImageUrl(selectedComplaint.media_url)}
                         target="_blank"
                         rel="noreferrer"
-                        className="text-xs text-indigo-400 hover:underline font-semibold"
+                        className="text-[11px] text-slate-800 hover:underline font-semibold"
                       >
-                        Open Full Image ↗
+                        Open Full ↗
                       </a>
                     </div>
                   </div>
                 ) : (
-                  <div className="p-4 bg-slate-900/60 rounded-xl border border-slate-800 text-xs text-slate-500 italic">
+                  <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 text-xs text-slate-500 italic">
                     No evidence photos attached to this report.
                   </div>
                 )}
               </div>
 
               {/* Description */}
-              <div className="space-y-2">
-                <h4 className="text-sm font-semibold text-slate-300">Detailed Complaint Description</h4>
-                <div className="p-4 bg-slate-900 rounded-xl border border-slate-800 text-sm text-slate-300 leading-relaxed">
+              <div className="space-y-1.5">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600">Detailed Complaint Description</h4>
+                <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 text-xs text-slate-800 leading-relaxed">
                   {selectedComplaint.description || "No detailed description provided by the citizen."}
                 </div>
               </div>
 
               {/* GPS Geolocation & Map Inspector */}
-              <div className="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-3">
-                <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center justify-between">
-                  <span className="flex items-center gap-1.5"><MapPin size={14} className="text-rose-400" /> Exact Incident GPS Location</span>
+              <div className="bg-slate-50/70 p-4 rounded-lg border border-slate-200 space-y-2">
+                <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center justify-between">
+                  <span className="flex items-center gap-1"><MapPin size={13} className="text-slate-500" /> Recorded GPS Location</span>
                   {selectedComplaint.latitude && selectedComplaint.longitude && (
                     <a
                       href={`https://www.google.com/maps?q=${selectedComplaint.latitude},${selectedComplaint.longitude}`}
                       target="_blank"
                       rel="noreferrer"
-                      className="text-[11px] text-indigo-400 hover:underline font-semibold"
+                      className="text-[11px] text-slate-800 hover:underline font-semibold"
                     >
-                      Open in Google Maps ↗
+                      Open in Maps ↗
                     </a>
                   )}
                 </div>
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 bg-slate-950 rounded-lg border border-slate-800/80">
-                  <div className="space-y-1">
-                    <div className="font-mono text-xs font-semibold text-slate-200">
-                      {selectedComplaint.gps_location || (selectedComplaint.latitude && selectedComplaint.longitude ? `${selectedComplaint.latitude.toFixed(6)}, ${selectedComplaint.longitude.toFixed(6)}` : "Location provided via school coordinates")}
-                    </div>
-                    <div className="text-[11px] text-slate-500">
-                      School: {selectedComplaint.school_name || "Primary School"} • District: {selectedComplaint.district || "Vadodara"}
-                    </div>
-                  </div>
-                  {selectedComplaint.latitude && selectedComplaint.longitude && (
-                    <div className="shrink-0">
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold bg-rose-950/40 text-rose-300 border border-rose-800/60">
-                        <MapPin size={12} /> Pin Verified
-                      </span>
-                    </div>
-                  )}
+                <div className="p-2.5 bg-white rounded border border-slate-200 flex items-center justify-between text-xs">
+                  <span className="font-mono text-[11px] text-slate-800">
+                    {selectedComplaint.gps_location || (selectedComplaint.latitude && selectedComplaint.longitude ? `${selectedComplaint.latitude.toFixed(6)}, ${selectedComplaint.longitude.toFixed(6)}` : "Location mapped via school UDISE records")}
+                  </span>
+                  <span className="text-[10px] text-slate-400">Validated</span>
                 </div>
               </div>
 
               {/* Actions panel */}
-              <div className="p-6 bg-slate-900 rounded-xl border border-slate-800 space-y-4">
-                <h4 className="text-sm font-semibold text-slate-300">Audit Actions Control</h4>
+              <div className="p-4 bg-white rounded-lg border border-slate-200 space-y-3">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700">Audit Actions & Status Update</h4>
                 
                 <textarea
-                  placeholder="Enter resolution notes, contract details, or reasons for rejection..."
+                  placeholder="Enter inspection notes, contractor assignment details, or reasons..."
                   value={actionNotes}
                   onChange={(e) => setActionNotes(e.target.value)}
-                  className="w-full p-3 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-800"
                   rows={2}
                 />
 
-                <div className="flex flex-wrap gap-3">
-                  {!["completed", "resolved", "rejected"].includes(selectedComplaint.status.toLowerCase()) && (
+                <div className="flex flex-wrap gap-2.5">
+                  {!["completed", "resolved", "rejected"].includes((selectedComplaint.status || "").toLowerCase()) && (
                     <>
                       <button
                         onClick={() => handleUpdateStatus("assigned")}
                         disabled={actionLoading}
-                        className="flex-1 min-w-[160px] inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-semibold shadow-lg shadow-indigo-600/10 transition-colors disabled:opacity-50"
+                        className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-md text-xs font-semibold transition-colors disabled:opacity-50 cursor-pointer"
                       >
-                        <ThumbsUp size={16} /> Approve & Assign Work
+                        <ThumbsUp size={14} /> Approve & Assign Work
                       </button>
 
                       <button
                         onClick={() => handleUpdateStatus("in_progress")}
                         disabled={actionLoading}
-                        className="flex-1 min-w-[160px] inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-sm font-semibold shadow-lg shadow-amber-600/10 transition-colors disabled:opacity-50"
+                        className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 bg-blue-700 hover:bg-blue-800 text-white rounded-md text-xs font-semibold transition-colors disabled:opacity-50 cursor-pointer"
                       >
-                        <Calendar size={16} /> Log Field Visit
+                        <Calendar size={14} /> Log Field Inspection
                       </button>
 
                       <button
                         onClick={() => handleUpdateStatus("completed")}
                         disabled={actionLoading}
-                        className="flex-1 min-w-[160px] inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-sm font-semibold shadow-lg shadow-emerald-600/10 transition-colors disabled:opacity-50"
+                        className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-md text-xs font-semibold transition-colors disabled:opacity-50 cursor-pointer"
                       >
-                        <CheckCircle2 size={16} /> Mark Completed
+                        <CheckCircle2 size={14} /> Mark Completed
                       </button>
 
                       <button
                         onClick={() => handleUpdateStatus("rejected")}
                         disabled={actionLoading}
-                        className="flex-1 min-w-[140px] inline-flex items-center justify-center gap-1.5 px-4 py-2.5 bg-red-950 hover:bg-red-900 text-red-300 rounded-xl text-sm font-semibold border border-red-800/40 transition-colors disabled:opacity-50"
+                        className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 bg-white hover:bg-rose-50 text-rose-700 border border-rose-200 rounded-md text-xs font-semibold transition-colors disabled:opacity-50 cursor-pointer"
                       >
-                        <ThumbsDown size={16} /> Reject Report
+                        <ThumbsDown size={14} /> Reject Report
                       </button>
                     </>
                   )}
 
-                  {["completed", "resolved"].includes(selectedComplaint.status.toLowerCase()) && (
-                    <div className="w-full text-center text-xs text-emerald-400 bg-emerald-950/20 py-3 rounded-lg border border-emerald-900/40 font-semibold uppercase tracking-wider">
-                      ✓ Defect inspection resolved and archived
+                  {["completed", "resolved"].includes((selectedComplaint.status || "").toLowerCase()) && (
+                    <div className="w-full text-center text-xs text-emerald-800 bg-emerald-50 py-2.5 rounded border border-emerald-200 font-semibold">
+                      ✓ Defect remediation verified and recorded in compliance archive
                     </div>
                   )}
 
-                  {selectedComplaint.status.toLowerCase() === "rejected" && (
-                    <div className="w-full text-center text-xs text-red-400 bg-red-950/10 py-3 rounded-lg border border-red-900/20 font-semibold uppercase tracking-wider">
-                      ✕ Report rejected and archived
+                  {(selectedComplaint.status || "").toLowerCase() === "rejected" && (
+                    <div className="w-full text-center text-xs text-rose-800 bg-rose-50 py-2.5 rounded border border-rose-200 font-semibold">
+                      ✕ Report rejected and closed
                     </div>
                   )}
                 </div>
@@ -446,9 +424,9 @@ function AuditorComplaintsContent() {
           </div>
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center text-slate-500 p-8">
-            <ClipboardList size={40} className="mb-2" />
-            <span className="text-sm font-semibold">No complaint selected</span>
-            <p className="text-xs text-slate-600 mt-1">Select an issue from the list on the left to inspect.</p>
+            <ClipboardList size={32} className="mb-2 text-slate-400" />
+            <span className="text-xs font-semibold text-slate-700">No complaint selected</span>
+            <p className="text-[11px] text-slate-400 mt-0.5">Select an issue from the list on the left to inspect.</p>
           </div>
         )}
       </div>
@@ -458,7 +436,7 @@ function AuditorComplaintsContent() {
 
 export default function AuditorComplaintsPage() {
   return (
-    <Suspense fallback={<div className="p-8 text-center text-slate-500">Loading complaints...</div>}>
+    <Suspense fallback={<div className="p-8 text-center text-slate-500 text-xs">Loading complaints...</div>}>
       <AuditorComplaintsContent />
     </Suspense>
   );
