@@ -9,16 +9,15 @@ x-common-env: &common-env
   QDRANT_URL: http://qdrant:6333
   JWT_SECRET: dev-jwt-secret-change-in-production
   JWT_ALGORITHM: HS256
-  AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-minioadmin}
-  AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-minioadmin}
-  AWS_REGION: ap-south-1
-  S3_BUCKET: eduaudit-media
+  MEDIA_STORAGE_PATH: /app/uploads
+  MEDIA_URL: /media
   CLOUDINARY_URL: ${CLOUDINARY_URL:-}
   SMTP_HOST: smtp.gmail.com
   SMTP_PORT: 587
   SMTP_USER: ${SMTP_USER:-}
   SMTP_PASS: ${SMTP_PASS:-}
   MSG91_AUTH_KEY: ${MSG91_AUTH_KEY:-}
+  GEMINI_API_KEY: ${GEMINI_API_KEY:-}
   ENVIRONMENT: development
   LOG_LEVEL: DEBUG
 
@@ -60,6 +59,7 @@ services:
     volumes:
       - ./backend/app:/app/app
       - ./cv_models:/app/models
+      - media_data:/app/uploads
     depends_on:
       db:
         condition: service_healthy
@@ -92,6 +92,7 @@ services:
     volumes:
       - ./backend/app:/app/app
       - ./cv_models:/app/models
+      - media_data:/app/uploads
     depends_on:
       db:
         condition: service_healthy
@@ -100,6 +101,8 @@ services:
       qdrant:
         condition: service_started
     restart: unless-stopped
+    healthcheck:
+      disable: true
     deploy:
       resources:
         reservations:
@@ -118,10 +121,13 @@ services:
       <<: *common-env
     volumes:
       - ./backend/app:/app/app
+      - media_data:/app/uploads
     depends_on:
       - db
       - redis
     restart: unless-stopped
+    healthcheck:
+      disable: true
 
   # ==============================
   # PostgreSQL + pgvector + PostGIS
@@ -176,22 +182,6 @@ services:
     restart: unless-stopped
 
   # ==============================
-  # MinIO (S3-compatible dev storage)
-  # ==============================
-  minio:
-    image: minio/minio:latest
-    ports:
-      - "9000:9000"   # API
-      - "9001:9001"   # Console
-    environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
-    volumes:
-      - minio_data:/data
-    command: server /data --console-address ":9001"
-    restart: unless-stopped
-
-  # ==============================
   # Nginx Reverse Proxy
   # ==============================
   nginx:
@@ -210,4 +200,4 @@ volumes:
   pgdata:
   qdrant_storage:
   redis_data:
-  minio_data:
+  media_data:

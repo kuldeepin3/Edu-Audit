@@ -60,7 +60,7 @@
 │   (AI inference,    │               │ PostgreSQL+pgvector       │
 │    RAG, fraud)      │               │ Qdrant (Vector DB)        │
 └─────────────────────┘               │ Redis (Cache/Queue)       │
-                                      │ AWS S3 (Media Storage)    │
+                                      │ Local Media Storage        │
                                       └───────────────────────────┘
 ```
 
@@ -95,7 +95,7 @@ EduAudit/
 │   │   │   ├── vision.py           # YOLOv11 service
 │   │   │   ├── rag.py              # RAG pipeline (Qdrant + LLM)
 │   │   │   ├── fraud.py            # Perceptual hashing + CLIP
-│   │   │   ├── storage.py          # S3 + Cloudinary
+│   │   │   ├── storage.py          # Local media + Cloudinary
 │   │   │   └── report_generator.py # Auto-report generation
 │   │   ├── middleware/
 │   │   │   └── security.py         # Rate limiting + audit
@@ -160,11 +160,12 @@ docker-compose up -d
 
 # Services will be available at:
 #   Frontend:  http://localhost:3000
+#   Backend:   http://localhost:8001/
 #   API:       http://localhost:8000
 #   API Docs:  http://localhost:8000/api/docs
 #   PostgreSQL: localhost:5432
 #   Qdrant:    http://localhost:6333/dashboard
-#   MinIO:     http://localhost:9001 (S3-compatible storage)
+#   Uploads:   http://localhost:8001/media/ (persistent Docker volume)
 ```
 
 ### Option 2: Development Setup

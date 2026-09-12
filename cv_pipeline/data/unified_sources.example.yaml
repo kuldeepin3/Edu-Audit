@@ -1,0 +1,17 @@
+# Download each Roboflow export as YOLOv11, unzip it locally, review its labels,
+# then copy this file to unified_sources.yaml and use only verified mappings.
+sources:
+  - name: existing_school_data
+    path: ../eduaudit_dataset
+    data_yaml: data.yaml
+    class_map:
+      broken_toilet: broken_toilet
+      damaged_wall: damaged_wall
+      unsafe_wiring: unsafe_wiring
+
+  # The supplied water dataset is labelled "Standing Water". Do NOT map it to
+  # roof_leakage unless the individual images have been manually reviewed.
+  # - name: reviewed_roof_leaks
+  #   path: ../raw_datasets/reviewed_roof_leaks
+  #   class_map:
+  #     roof_leak: roof_leakage

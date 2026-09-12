@@ -101,6 +101,33 @@ async def get_current_user(
     return user
 
 
+async def get_optional_current_user(
+    request: Request,
+    db: AsyncSession = Depends(get_db)
+) -> Optional[User]:
+    """Dependency to retrieve current user if authenticated, or None if anonymous/unauthenticated"""
+    try:
+        token = extract_token_from_request(request)
+        if not token:
+            return None
+        payload = get_token_payload(token)
+        if not payload or payload.get("type") != "access":
+            return None
+        user_id_str = payload.get("sub")
+        if not user_id_str:
+            return None
+        user_uuid = UUID(user_id_str)
+        result = await db.execute(select(User).where(User.id == user_uuid))
+        user = result.scalar_one_or_none()
+        if user and user.is_active:
+            request.state.user = user
+            request.state.token_payload = payload
+            return user
+        return None
+    except Exception:
+        return None
+
+
 async def get_current_auditor_profile(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)

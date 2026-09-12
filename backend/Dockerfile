@@ -19,11 +19,9 @@ RUN pip install --default-timeout=1000 --no-cache-dir -r requirements.txt
 # Copy application code
 COPY app/ ./app/
 
-# Pre-create model directory
-RUN mkdir -p /app/models
-
 # Non-root user for security
 RUN useradd --create-home --shell /bin/bash appuser
+RUN mkdir -p /app/models /app/uploads && chown -R appuser:appuser /app
 USER appuser
 
 # Expose port

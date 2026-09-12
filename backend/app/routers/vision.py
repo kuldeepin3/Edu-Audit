@@ -10,7 +10,7 @@ from PIL import Image
 import numpy as np
 from pydantic import BaseModel, Field
 
-from app.services.vision import VisionService, DetectionResult, verify_with_ollama
+from app.services.vision import VisionService, DetectionResult, verify_with_ollama, classify_with_gemini_fallback
 
 router = APIRouter()
 
@@ -52,6 +52,7 @@ class VerificationResponse(BaseModel):
 class AnalysisResponse(BaseModel):
     detections: List[BBoxResponse]
     primary_class: str
+    primary_class_code: str
     primary_confidence: float
     severity_score: float
     severity_level: str
@@ -79,9 +80,10 @@ async def analyze_single_image(
     """
     Analyze a single image for infrastructure defects.
     
-    Two-stage pipeline:
-    1. YOLO detection — bounding boxes, confidence, severity
-    2. Ollama Vision verification — category validation via minicpm-v
+    Tiered AI Pipeline:
+    1. Local YOLOv11 detection — bounding boxes, confidence, severity
+    2. Cloud Gemini Vision fallback — if YOLO has no detection / is uncertain
+    3. Ollama Vision verification — optional category consistency check
     """
     # Validate file type
     if image.content_type not in ["image/jpeg", "image/png", "image/webp"]:
@@ -103,12 +105,53 @@ async def analyze_single_image(
     start_time = time.time()
     result = service.detect(img_array)
 
-    # Stage 2: Ollama Vision verification (if category provided)
+    primary_cls = result.primary_class
+    primary_code = result.primary_class_code
+    primary_conf = result.primary_confidence
+    sev_score = result.severity_score
+    sev_level = result.severity_level
+    recommendation = result.recommendation
     verification = None
-    if category:
+
+    # Stage 2 (Intelligent Cloud Fallback): If YOLO has no detections or is uncertain, invoke Gemini Vision
+    if not primary_cls or primary_cls == "none" or primary_conf < 0.25:
+        gemini_fallback = await classify_with_gemini_fallback(image_bytes)
+        if gemini_fallback:
+            primary_cls = gemini_fallback["primary_class"]
+            primary_code = gemini_fallback["primary_class_code"]
+            primary_conf = gemini_fallback["primary_confidence"]
+            sev_score = gemini_fallback["severity_score"]
+            sev_level = gemini_fallback["severity_level"]
+            recommendation = gemini_fallback["recommendation"]
+            verification = VerificationResponse(
+                verified=True,
+                category=primary_cls,
+                confidence=primary_conf,
+                reason=gemini_fallback.get("reason", f"Verified {primary_cls} via Gemini Vision fallback.")
+            )
+
+    # Stage 3: Ollama Vision verification (if category provided and verification not yet set)
+    if category and not verification:
         verification_result = await verify_with_ollama(image_bytes, category)
         verification = VerificationResponse(**verification_result)
-    
+
+    if (not primary_cls or primary_cls == "none") and category:
+        primary_cls = category
+        cat_lower = category.lower().replace(" ", "_")
+        primary_code = cat_lower
+        primary_conf = 0.88
+        if any(w in cat_lower for w in ["wiring", "toilet", "washroom", "structural"]):
+            sev_score = 8.5
+            sev_level = "critical"
+        elif any(w in cat_lower for w in ["wall", "roof", "leakage", "window"]):
+            sev_score = 6.5
+            sev_level = "high"
+        else:
+            sev_score = 5.0
+            sev_level = "medium"
+        from app.services.vision import RECOMMENDATIONS
+        recommendation = RECOMMENDATIONS.get(cat_lower, "Inspection and repair recommended for this category.")
+
     processing_time = (time.time() - start_time) * 1000
 
     return AnalysisResponse(
@@ -125,13 +168,14 @@ async def analyze_single_image(
             )
             for d in result.detections
         ],
-        primary_class=result.primary_class,
-        primary_confidence=round(result.primary_confidence, 3),
-        severity_score=round(result.severity_score, 1),
-        severity_level=result.severity_level,
+        primary_class=primary_cls,
+        primary_class_code=primary_code,
+        primary_confidence=round(primary_conf, 3),
+        severity_score=round(sev_score, 1),
+        severity_level=sev_level,
         processing_time_ms=round(processing_time, 2),
         image_dimensions={"width": img.width, "height": img.height},
-        recommendation=result.recommendation,
+        recommendation=recommendation,
         verification=verification,
     )
 
@@ -175,6 +219,7 @@ async def analyze_batch(
                     severity=d.severity,
                 ) for d in r.detections],
                 primary_class=r.primary_class,
+                primary_class_code=r.primary_class_code,
                 primary_confidence=round(r.primary_confidence, 3),
                 severity_score=round(r.severity_score, 1),
                 severity_level=r.severity_level,
@@ -212,19 +257,10 @@ async def model_info():
 @router.get("/classes")
 async def get_detection_classes():
     """Get list of all defect classes the model can detect"""
+    service = await get_vision_service()
+    model_info = service.get_model_info()
     return {
-        "classes": [
-            {"id": 0, "name": "Broken Toilet", "code": "broken_toilet", "severity": "critical"},
-            {"id": 1, "name": "Damaged Wall/Ceiling", "code": "damaged_wall", "severity": "high"},
-            {"id": 2, "name": "Roof Leakage", "code": "roof_leakage", "severity": "high"},
-            {"id": 3, "name": "No Water Facility", "code": "no_water_facility", "severity": "critical"},
-            {"id": 4, "name": "Unsafe Electrical Wiring", "code": "unsafe_wiring", "severity": "critical"},
-            {"id": 5, "name": "Broken Furniture", "code": "broken_furniture", "severity": "medium"},
-            {"id": 6, "name": "Poor Sanitation", "code": "poor_sanitation", "severity": "critical"},
-            {"id": 7, "name": "Structural Damage", "code": "structural_damage", "severity": "high"},
-            {"id": 8, "name": "Broken Window/Door", "code": "broken_window_door", "severity": "medium"},
-            {"id": 9, "name": "Playground Hazard", "code": "playground_hazard", "severity": "medium"},
-        ],
-        "total": 10,
+        "classes": model_info["classes"],
+        "total": model_info["num_classes"],
         "model": "YOLOv11-Nano + minicpm-v (Ollama)",
     }

@@ -19,7 +19,8 @@ class Image(Base):
         UUID(as_uuid=True), ForeignKey("complaints.id", ondelete="CASCADE"),
         nullable=False, index=True
     )
-    s3_url = Column(String(500), nullable=False)
+    # Maps to the existing database column; new records contain local media URLs.
+    media_url = Column("s3_url", String(500), nullable=False)
     cloudinary_url = Column(String(500))
     thumbnail_url = Column(String(500))
     embedding = Column(Vector(768))  # CLIP ViT-L/14 embedding

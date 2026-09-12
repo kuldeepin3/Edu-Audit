@@ -36,6 +36,7 @@ class OTPRequest(BaseModel):
 class ComplaintResponse(BaseModel):
     id: UUID
     report_id: str
+    reporter_id: Optional[UUID] = None
     school_id: Optional[UUID] = None
     school_name: Optional[str] = None
     district: Optional[str] = None
@@ -47,6 +48,11 @@ class ComplaintResponse(BaseModel):
     description: Optional[str] = None
     ai_analysis: Dict[str, Any] = {}
     is_anonymous: bool = False
+    reporter_name: Optional[str] = None
+    reporter_email: Optional[str] = None
+    reporter_phone: Optional[str] = None
+    images: List[Dict[str, Any]] = []
+    media_url: Optional[str] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
     resolved_at: Optional[datetime] = None

@@ -141,13 +141,13 @@ class RAGService:
             return {"status": "error", "message": "Qdrant not available"}
 
         try:
-            from app.db import async_session
+            from app.db import AsyncSessionLocal
             from sqlalchemy import text
 
             indexed = 0
             errors = 0
 
-            async with async_session() as session:
+            async with AsyncSessionLocal() as session:
                 result = await session.execute(
                     text("""
                         SELECT 
@@ -226,30 +226,92 @@ class RAGService:
         # Step 1: Query understanding
         intent = self._classify_intent(question)
 
-        # Step 2: Generate query embedding via Ollama
-        query_embedding = await ollama_client.embed(question)
+        # Step 2: Check if an exact report ID is asked (e.g. RPT-20260912-00001)
+        import re
+        explicit_reports = []
+        report_ids = re.findall(r'RPT-[\w-]+', question, re.IGNORECASE)
+        for r_id in set(report_ids):
+            match = await self._lookup_by_report_id(r_id)
+            if match:
+                explicit_reports.append(match)
 
-        if not query_embedding:
+        # If user specifically asked for a specific report ID, return ONLY that report!
+        if explicit_reports:
+            context = self._build_context(explicit_reports)
+            system_prompt = f"""You are EduAudit AI Assistant.
+The user is asking specifically about Report ID: {', '.join([r['report_id'] for r in explicit_reports])}.
+Answer ONLY about this specific report using the context below.
+Do NOT mention or list other complaints.
+Include: Report ID, School Name, District, Category, Severity, Status, Date, and Description.
+
+Context:
+{context}"""
+            answer = await ollama_client.chat(
+                prompt=question,
+                system_prompt=system_prompt,
+            )
+            citations = self._extract_citations(explicit_reports)
+            data_summary = self._build_data_summary(explicit_reports)
             return {
-                "answer": "⚠️ AI service is not available. Please ensure Ollama is running at "
-                          f"{settings.OLLAMA_BASE_URL} with the model '{settings.OLLAMA_EMBED_MODEL}'.",
-                "citations": [],
-                "follow_ups": [],
-                "data_summary": None,
-                "confidence": 0.0,
+                "answer": answer,
+                "citations": citations,
+                "follow_ups": [
+                    "What actions are needed for this report?",
+                    "Show all pending complaints in this school",
+                    "Show all reports in this district",
+                ],
+                "data_summary": data_summary,
+                "confidence": 98.0,
             }
 
-        # Step 3: Vector search with filters
-        retrieved = await self._search_qdrant(
-            question=question,
-            query_vector=query_embedding,
-            filters=filters,
-            intent=intent,
-            top_k=10,
-        )
+        # Otherwise, check for status/filter query (e.g. "pending", "completed", "critical", "open")
+        q_lower = question.lower()
+        status_filter = None
+        severity_filter = None
+        if "pending" in q_lower or "unresolved" in q_lower or "open" in q_lower:
+            status_filter = "pending"
+        elif "completed" in q_lower or "resolved" in q_lower or "fixed" in q_lower:
+            status_filter = "completed"
+
+        if "critical" in q_lower:
+            severity_filter = "critical"
+        elif "high severity" in q_lower or "high priority" in q_lower:
+            severity_filter = "high"
+
+        db_matches = []
+        if status_filter or severity_filter:
+            db_matches = await self._lookup_by_status_or_severity(status_filter, severity_filter)
+
+        # Step 3: Generate query embedding via Ollama
+        query_embedding = await ollama_client.embed(question)
+
+        # Step 4: Vector search in Qdrant
+        retrieved = []
+        if query_embedding:
+            retrieved = await self._search_qdrant(
+                question=question,
+                query_vector=query_embedding,
+                filters=filters,
+                intent=intent,
+                top_k=15,
+            )
+
+        # Merge DB matches with retrieved vector results (avoid duplicates)
+        seen_ids = set()
+        merged = []
+        for r in db_matches:
+            if r.get("report_id") not in seen_ids:
+                seen_ids.add(r.get("report_id"))
+                merged.append(r)
+
+        for r in retrieved:
+            if r.get("report_id") not in seen_ids:
+                seen_ids.add(r.get("report_id"))
+                merged.append(r)
+
+        retrieved = merged
 
         if not retrieved:
-            # Try to answer without context if Ollama is available
             if ollama_available:
                 answer = await ollama_client.chat(
                     prompt=question,
@@ -277,18 +339,20 @@ class RAGService:
 
         # Step 4: Rerank
         reranked = self._rerank(question, retrieved)
+        top_docs = reranked[:10]
 
         # Step 5: Build context for LLM
-        context = self._build_context(reranked[:5])
+        context = self._build_context(top_docs)
 
         # Step 6: Generate response with Ollama llama3.2
         system_prompt = f"""You are EduAudit AI Assistant.
-Answer only using the supplied context below.
-Do not hallucinate or make up information.
-Mention complaint IDs (report IDs).
-Mention school names.
-Mention dates when available.
-Be concise but thorough.
+Answer the user's question clearly and systematically based only on the context below.
+If the user asks for a list (e.g. pending reports), list each matching report with:
+- Report ID (e.g. RPT-...)
+- School Name & District
+- Category & Severity
+- Current Status
+- Brief description
 
 Context:
 {context}"""
@@ -299,17 +363,17 @@ Context:
         )
 
         # Step 7: Extract citations
-        citations = self._extract_citations(reranked[:5])
+        citations = self._extract_citations(top_docs)
 
         # Step 8: Data summary
-        data_summary = self._build_data_summary(reranked[:5])
+        data_summary = self._build_data_summary(top_docs)
 
         return {
             "answer": answer,
             "citations": citations,
             "follow_ups": self._generate_follow_ups(question),
             "data_summary": data_summary,
-            "confidence": self._calculate_confidence(reranked[:5]),
+            "confidence": self._calculate_confidence(top_docs),
         }
 
     # ========================================================================
@@ -318,6 +382,7 @@ Context:
 
     async def get_status(self) -> Dict[str, Any]:
         """Check health of all RAG components"""
+        await self._ensure_initialized()
         from app.services.ollama import ollama_client
 
         ollama_ok = await ollama_client.is_available()
@@ -390,6 +455,104 @@ Context:
                     return intent
         return "general"
 
+    async def _lookup_by_report_id(self, report_id: str) -> Optional[Dict]:
+        """Direct database lookup by report ID"""
+        try:
+            from app.db import AsyncSessionLocal
+            from sqlalchemy import text
+            async with AsyncSessionLocal() as session:
+                result = await session.execute(
+                    text("""
+                        SELECT 
+                            c.report_id, c.description, c.severity_level, c.status,
+                            c.created_at,
+                            s.name as school_name, 
+                            d.name as district_name,
+                            cat.name as category_name
+                        FROM complaints c
+                        LEFT JOIN schools s ON c.school_id = s.id
+                        LEFT JOIN districts d ON s.district_id = d.id
+                        LEFT JOIN categories cat ON c.category_id = cat.id
+                        WHERE c.report_id ILIKE :report_id
+                        LIMIT 1
+                    """),
+                    {"report_id": f"%{report_id.strip()}%"}
+                )
+                row = result.fetchone()
+                if row:
+                    return {
+                        "id": str(row.report_id),
+                        "score": 1.0,
+                        "report_id": row.report_id or "",
+                        "school_name": row.school_name or "Unknown School",
+                        "district": row.district_name or "Vadodara",
+                        "category": row.category_name or "Infrastructure",
+                        "severity": row.severity_level or "medium",
+                        "status": row.status or "pending_review",
+                        "content": row.description or "No description provided",
+                        "created_at": str(row.created_at) if row.created_at else "",
+                    }
+        except Exception as e:
+            logger.error(f"Failed direct report lookup for {report_id}: {e}")
+        return None
+
+    async def _lookup_by_status_or_severity(self, status_filter: str = None, severity_filter: str = None) -> List[Dict]:
+        """Database lookup for list queries (e.g. pending, completed, critical)"""
+        try:
+            from app.db import AsyncSessionLocal
+            from sqlalchemy import text
+            async with AsyncSessionLocal() as session:
+                where_clauses = []
+                params = {}
+                if status_filter == "pending":
+                    where_clauses.append("c.status NOT IN ('completed', 'resolved', 'rejected')")
+                elif status_filter == "completed":
+                    where_clauses.append("c.status IN ('completed', 'resolved')")
+                elif status_filter == "in_progress":
+                    where_clauses.append("c.status = 'in_progress'")
+                
+                if severity_filter:
+                    where_clauses.append("c.severity_level = :sev")
+                    params["sev"] = severity_filter
+
+                where_sql = ("WHERE " + " AND ".join(where_clauses)) if where_clauses else ""
+                
+                query_sql = f"""
+                    SELECT 
+                        c.report_id, c.description, c.severity_level, c.status,
+                        c.created_at,
+                        s.name as school_name, 
+                        d.name as district_name,
+                        cat.name as category_name
+                    FROM complaints c
+                    LEFT JOIN schools s ON c.school_id = s.id
+                    LEFT JOIN districts d ON s.district_id = d.id
+                    LEFT JOIN categories cat ON c.category_id = cat.id
+                    {where_sql}
+                    ORDER BY c.created_at DESC
+                    LIMIT 20
+                """
+                result = await session.execute(text(query_sql), params)
+                rows = result.fetchall()
+                matches = []
+                for row in rows:
+                    matches.append({
+                        "id": str(row.report_id),
+                        "score": 1.0,
+                        "report_id": row.report_id or "",
+                        "school_name": row.school_name or "Unknown School",
+                        "district": row.district_name or "Vadodara",
+                        "category": row.category_name or "Infrastructure",
+                        "severity": row.severity_level or "medium",
+                        "status": row.status or "pending_review",
+                        "content": row.description or "No description provided",
+                        "created_at": str(row.created_at) if row.created_at else "",
+                    })
+                return matches
+        except Exception as e:
+            logger.error(f"Failed status lookup: {e}")
+        return []
+
     async def _search_qdrant(
         self,
         question: str,
@@ -431,7 +594,6 @@ Context:
                 query_filter=qdrant_filter,
                 limit=top_k,
                 with_payload=True,
-                score_threshold=0.3,
             )
 
             return [

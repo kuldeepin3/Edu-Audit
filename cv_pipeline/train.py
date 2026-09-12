@@ -36,18 +36,19 @@ test: images/test
 # Class definitions
 names:
   0: broken_toilet
-  1: damaged_wall
-  2: roof_leakage
-  3: no_water_facility
-  4: unsafe_wiring
+  1: no_water_facility
+  2: unsafe_wiring
+  3: damaged_wall
+  4: roof_leakage
   5: broken_furniture
-  6: poor_sanitation
-  7: structural_damage
-  8: broken_window_door
-  9: playground_hazard
+  6: broken_window_door
+  7: missing_ramp
+  8: poor_sanitation
+  9: boundary_wall_damage
+  10: playground_hazard
 
 # Number of classes
-nc: 10
+nc: 11
 """
 
 
@@ -160,7 +161,7 @@ def train(
 
     # Phase 1: Train head (freeze backbone)
     print("\n🧊 Phase 1: Training head layers (backbone frozen)")
-    phase1_epochs = min(50, epochs // 3)
+    phase1_epochs = max(1, epochs // 2) if epochs >= 2 else epochs
     model.train(
         data=data_yaml,
         epochs=phase1_epochs,
@@ -200,31 +201,33 @@ def train(
     )
 
     # Phase 2: Fine-tune all layers
-    print(f"\n🔥 Phase 2: Fine-tuning all layers ({epochs - phase1_epochs} epochs)")
-    best_weights = os.path.join(project, f"{name}_phase1", "weights", "best.pt")
-    model = YOLO(best_weights)
-    model.train(
-        data=data_yaml,
-        epochs=epochs,
-        batch=batch_size,
-        imgsz=img_size,
-        device=device,
-        workers=workers,
-        project=project,
-        name=f"{name}_phase2",
-        freeze=0,  # Unfreeze all
-        patience=patience,
-        pretrained=False,
-        optimizer="AdamW",
-        lr0=0.0001,  # Lower LR for fine-tuning
-        lrf=0.01,
-        weight_decay=0.0005,
-        warmup_epochs=3,
-        mosaic=0.5,  # Reduce mosaic
-        mixup=0.05,
-        amp=True,
-        verbose=True,
-    )
+    phase2_epochs = epochs - phase1_epochs
+    if phase2_epochs > 0:
+        print(f"\n🔥 Phase 2: Fine-tuning all layers ({phase2_epochs} epochs)")
+        best_weights = os.path.join(project, f"{name}_phase1", "weights", "best.pt")
+        model = YOLO(best_weights)
+        model.train(
+            data=data_yaml,
+            epochs=phase2_epochs,
+            batch=batch_size,
+            imgsz=img_size,
+            device=device,
+            workers=workers,
+            project=project,
+            name=f"{name}_phase2",
+            freeze=0,  # Unfreeze all
+            patience=patience,
+            pretrained=False,
+            optimizer="AdamW",
+            lr0=0.0001,  # Lower LR for fine-tuning
+            lrf=0.01,
+            weight_decay=0.0005,
+            warmup_epochs=3,
+            mosaic=0.5,  # Reduce mosaic
+            mixup=0.05,
+            amp=True,
+            verbose=True,
+        )
 
     print("\n✅ Training complete!")
     print(f"   Best weights: {project}/{name}_phase2/weights/best.pt")
@@ -269,10 +272,10 @@ def evaluate(weights: str, data_yaml: str, img_size: int = 640, device: str = ""
     print("  " + "-" * 65)
 
     class_names = {
-        0: "Broken Toilet", 1: "Damaged Wall", 2: "Roof Leakage",
-        3: "No Water", 4: "Unsafe Wiring", 5: "Broken Furniture",
-        6: "Poor Sanitation", 7: "Structural Damage",
-        8: "Broken Window", 9: "Playground Hazard",
+        0: "Broken Toilet", 1: "No Water", 2: "Unsafe Wiring",
+        3: "Damaged Wall", 4: "Roof Leakage", 5: "Broken Furniture",
+        6: "Broken Window/Door", 7: "Missing Ramp", 8: "Poor Sanitation",
+        9: "Boundary Wall Damage", 10: "Playground Hazard",
     }
 
     if hasattr(results.box, "ap_class_index") and results.box.ap_class_index is not None:

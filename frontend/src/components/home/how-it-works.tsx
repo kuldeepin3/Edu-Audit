@@ -19,27 +19,20 @@ export function HowItWorks() {
     },
     {
       number: "03",
-      icon: "🛡️",
-      title: "Fraud Check",
-      description:
-        "Perceptual hashing and CLIP embeddings filter duplicates, edited images, and spam before reports reach authorities.",
-    },
-    {
-      number: "04",
       icon: "🏛️",
       title: "Authority Action",
       description:
         "District officers see prioritized complaints on dashboards with heatmaps, cost estimates, and SLA tracking.",
     },
     {
-      number: "05",
+      number: "04",
       icon: "🔧",
       title: "Repair & Track",
       description:
         "Contractors are assigned, work begins, and citizens receive real-time status updates until resolution.",
     },
     {
-      number: "06",
+      number: "05",
       icon: "✅",
       title: "Verified Completion",
       description:

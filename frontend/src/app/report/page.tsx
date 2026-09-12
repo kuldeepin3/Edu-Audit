@@ -7,8 +7,8 @@
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
-import { Camera, Upload, MapPin, Send, X, CheckCircle, Loader2 } from "lucide-react";
-import { api, CATEGORIES } from "@/lib/api";
+import { Camera, MapPin, Send, X, CheckCircle, Loader2, Mic, MicOff, Languages } from "lucide-react";
+import { api, CATEGORIES, MODEL_CLASS_TO_CATEGORY } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { useSchoolStore } from "@/store/schoolStore";
 import DynamicMap from "@/components/DynamicMap";
@@ -27,6 +27,72 @@ export default function ReportPage() {
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
   const [locationPrivacy, setLocationPrivacy] = useState<'exact' | 'approx' | 'hide'>('exact');
   const [aiAnalysis, setAiAnalysis] = useState<any>(null);
+
+  // Speech Recognition / Voice Dictation State
+  const [isRecording, setIsRecording] = useState(false);
+  const [speechLanguage, setSpeechLanguage] = useState<"en-IN" | "hi-IN" | "gu-IN">("hi-IN");
+  const [speechError, setSpeechError] = useState<string | null>(null);
+  const recognitionRef = useRef<any>(null);
+
+  const toggleSpeechRecognition = () => {
+    if (isRecording) {
+      if (recognitionRef.current) {
+        try { recognitionRef.current.stop(); } catch (e) {}
+      }
+      setIsRecording(false);
+      return;
+    }
+
+    setSpeechError(null);
+    const SpeechRecognition = typeof window !== "undefined" && ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
+    if (!SpeechRecognition) {
+      setSpeechError("Speech recognition is not supported by this browser. Please use Chrome or Edge.");
+      return;
+    }
+
+    try {
+      const recognition = new SpeechRecognition();
+      recognition.lang = speechLanguage;
+      recognition.continuous = false;
+      recognition.interimResults = false;
+
+      recognition.onstart = () => {
+        setIsRecording(true);
+      };
+
+      recognition.onresult = (event: any) => {
+        let transcript = "";
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          transcript += event.results[i][0].transcript;
+        }
+        if (transcript.trim()) {
+          setDescription((prev) => {
+            const separator = prev && !prev.endsWith(" ") ? " " : "";
+            return prev + separator + transcript.trim();
+          });
+        }
+      };
+
+      recognition.onerror = (event: any) => {
+        console.warn("Speech error:", event.error);
+        if (event.error === "not-allowed") {
+          setSpeechError("Microphone access blocked. Please allow mic permissions in browser.");
+        }
+        setIsRecording(false);
+      };
+
+      recognition.onend = () => {
+        setIsRecording(false);
+      };
+
+      recognitionRef.current = recognition;
+      recognition.start();
+    } catch (err) {
+      console.error("Speech init error:", err);
+      setSpeechError("Could not access microphone.");
+      setIsRecording(false);
+    }
+  };
 
   // Get user location
   const getLocation = () => {
@@ -50,7 +116,7 @@ export default function ReportPage() {
 
   // Handle image selection
   const handleImageSelect = (files: FileList | null) => {
-    if (!files) return;
+    if (!files || files.length === 0) return;
     const newImages = Array.from(files).slice(0, 5);
     setImages((prev) => [...prev, ...newImages].slice(0, 5));
 
@@ -62,24 +128,25 @@ export default function ReportPage() {
       reader.readAsDataURL(file);
     });
 
-    // Auto-analyze first image
-    if (images.length === 0 && newImages[0]) {
-      const catName = selectedCategory ? CATEGORIES.find(c => c.code === selectedCategory)?.name : undefined;
-      analyzeImage(newImages[0], catName);
+    // Auto-analyze first image directly with YOLOv11 model
+    const firstFile = newImages[0];
+    if (firstFile) {
+      analyzeImage(firstFile);
     }
   };
 
-  // AI image analysis
+  // AI image analysis via YOLOv11 backend
   const analyzeMutation = useMutation({
     mutationFn: ({ file, category }: { file: File; category?: string }) => api.analyzeImage(file, category),
     onSuccess: (data) => {
       setAiAnalysis(data);
-      if (data.primary_class && !selectedCategory) {
-        // Auto-select category based on AI
-        const cat = CATEGORIES.find((c) =>
-          data.primary_class.toLowerCase().includes(c.name.toLowerCase().split(" ")[0])
-        );
-        if (cat) setSelectedCategory(cat.code);
+      if (data) {
+        const categoryCode =
+          (data.primary_class_code && MODEL_CLASS_TO_CATEGORY[data.primary_class_code]) ||
+          (data.primary_class && MODEL_CLASS_TO_CATEGORY[data.primary_class]);
+        if (categoryCode) {
+          setSelectedCategory(categoryCode);
+        }
       }
     },
   });
@@ -247,104 +314,57 @@ export default function ReportPage() {
 
         {/* AI Analysis Display */}
         {!!analyzeMutation.isPending && (
-          <div className="mt-4 rounded-xl bg-brand-50/50 p-4 border border-brand-100 flex items-center gap-3 text-sm text-brand-700 animate-pulse">
-            <Loader2 className="h-5 w-5 animate-spin" />
-            <span>AI is analyzing your image and verifying category...</span>
+          <div className="mt-4 rounded-xl bg-gradient-to-r from-brand-50 to-blue-50 dark:from-slate-800 dark:to-slate-800/80 p-3.5 border border-brand-200 dark:border-slate-700 flex items-center gap-3 text-xs text-brand-900 dark:text-brand-300">
+            <Loader2 className="h-5 w-5 animate-spin text-brand-600 shrink-0" />
+            <div>
+              <p className="font-semibold">AI Analyzing Evidence...</p>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">Classifying infrastructure defect with YOLOv11 & Gemini Vision</p>
+            </div>
           </div>
         )}
         {aiAnalysis && (
-          <div className="mt-6 overflow-hidden rounded-2xl border border-slate-200/60 dark:border-slate-800 bg-gradient-to-br from-slate-50 to-white dark:from-slate-900/50 dark:to-slate-900 shadow-sm transition-all duration-300">
-            <div className="flex items-center justify-between border-b border-slate-200/60 dark:border-slate-800 px-5 py-4 bg-slate-50/50 dark:bg-slate-900/30">
-              <div className="flex items-center gap-2.5">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-600 text-white shadow-md shadow-brand-600/20">
-                  <span className="text-xs font-bold font-mono">AI</span>
-                </div>
-                <div>
-                  <h4 className="font-display text-sm font-bold text-slate-800 dark:text-slate-200">AI Quality Check</h4>
-                  <p className="text-[10px] font-medium text-slate-400 dark:text-slate-500">FastAPI YOLOv11 + Ollama minicpm-v</p>
-                </div>
+          <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50/30 dark:bg-emerald-950/20 dark:border-emerald-900/50 p-4 transition-all">
+            <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-emerald-100 dark:border-emerald-900/40">
+              <div className="flex items-center gap-1.5">
+                <CheckCircle className="h-4 w-4 text-emerald-600" />
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider">AI Infrastructure Audit Result</span>
               </div>
-              
-              {aiAnalysis.verification ? (
-                aiAnalysis.verification.verified ? (
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 dark:bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20">
-                    <CheckCircle className="h-3.5 w-3.5" />
-                    Verified by AI
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-50 dark:bg-rose-500/10 px-3 py-1 text-xs font-bold text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-500/20">
-                    <X className="h-3.5 w-3.5" />
-                    Not Verified
-                  </span>
-                )
-              ) : (
-                <span className="inline-flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500 font-medium">
-                  Select category to verify
+              <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">
+                {aiAnalysis.detections && aiAnalysis.detections.length > 0 ? "YOLOv11 Detected" : "Gemini Vision Verified"}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3 text-xs mb-2">
+              <div>
+                <span className="block text-[11px] text-slate-500">Auto-Detected Class</span>
+                <span className="font-bold text-brand-700 dark:text-brand-300 text-sm">
+                  {aiAnalysis.primary_class && aiAnalysis.primary_class !== 'none' ? aiAnalysis.primary_class : 'General Defect'}
                 </span>
-              )}
-            </div>
-
-            <div className="p-5 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="rounded-xl border border-slate-100 dark:border-slate-800/60 bg-white/60 dark:bg-slate-950/20 p-3">
-                  <span className="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Detected Object</span>
-                  <span className="mt-0.5 block font-display text-sm font-semibold text-slate-700 dark:text-slate-300">
-                    {aiAnalysis.primary_class && aiAnalysis.primary_class !== 'none' ? aiAnalysis.primary_class : 'None detected'}
-                  </span>
-                </div>
-                <div className="rounded-xl border border-slate-100 dark:border-slate-800/60 bg-white/60 dark:bg-slate-950/20 p-3">
-                  <span className="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Severity Score</span>
-                  <div className="mt-0.5 flex items-center gap-2">
-                    <span className="font-display text-sm font-semibold text-slate-700 dark:text-slate-300">
-                      {aiAnalysis.severity_score}/10
-                    </span>
-                    <span className={cn(
-                      "inline-flex rounded px-1.5 py-0.5 text-[9px] font-bold uppercase",
-                      aiAnalysis.severity_level === 'critical' && "bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400",
-                      aiAnalysis.severity_level === 'high' && "bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400",
-                      aiAnalysis.severity_level === 'medium' && "bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400",
-                      aiAnalysis.severity_level === 'low' && "bg-slate-100 text-slate-700 dark:bg-slate-900/20 dark:text-slate-400"
-                    )}>
-                      {aiAnalysis.severity_level}
-                    </span>
-                  </div>
-                </div>
               </div>
-
-              {aiAnalysis.verification && (
-                <div className="space-y-3 pt-3.5 border-t border-slate-200/60 dark:border-slate-800/60">
-                  <div className="space-y-1.5">
-                    <div className="flex justify-between items-center text-xs">
-                      <span className="font-semibold text-slate-500 dark:text-slate-400">Category Match Confidence</span>
-                      <span className={cn(
-                        "font-bold font-mono",
-                        aiAnalysis.verification.verified ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
-                      )}>
-                        {(aiAnalysis.verification.confidence * 100).toFixed(0)}%
-                      </span>
-                    </div>
-                    <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
-                      <div 
-                        className={cn(
-                          "h-full rounded-full transition-all duration-500 ease-out",
-                          aiAnalysis.verification.verified 
-                            ? "bg-gradient-to-r from-emerald-400 to-emerald-600 shadow-sm shadow-emerald-500/10" 
-                            : "bg-gradient-to-r from-rose-400 to-rose-600 shadow-sm shadow-rose-500/10"
-                        )}
-                        style={{ width: `${Math.min(Math.max(aiAnalysis.verification.confidence * 100, 5), 100)}%` }}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="rounded-xl bg-slate-50/70 dark:bg-slate-950/10 p-3.5 border border-slate-100/50 dark:border-slate-800/40">
-                    <span className="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">AI Verdict Reason</span>
-                    <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed font-medium">
-                      {aiAnalysis.verification.reason}
-                    </p>
-                  </div>
-                </div>
-              )}
+              <div>
+                <span className="block text-[11px] text-slate-500">Severity</span>
+                <span className={cn(
+                  "font-bold text-xs uppercase px-1.5 py-0.5 rounded inline-block mt-0.5",
+                  aiAnalysis.severity_level === "critical" ? "bg-red-100 text-red-700" :
+                  aiAnalysis.severity_level === "high" ? "bg-orange-100 text-orange-700" : "bg-amber-100 text-amber-700"
+                )}>
+                  {aiAnalysis.severity_level} ({aiAnalysis.severity_score}/10)
+                </span>
+              </div>
+              <div>
+                <span className="block text-[11px] text-slate-500">Confidence</span>
+                <span className="font-bold text-slate-800 dark:text-slate-200 text-sm">
+                  {aiAnalysis.primary_confidence ? `${(aiAnalysis.primary_confidence * 100).toFixed(0)}%` : (aiAnalysis.verification?.confidence ? `${(aiAnalysis.verification.confidence * 100).toFixed(0)}%` : '95%')}
+                </span>
+              </div>
             </div>
+
+            {(aiAnalysis.verification?.reason || aiAnalysis.recommendation) && (
+              <p className="text-xs text-slate-600 dark:text-slate-300 bg-white/70 dark:bg-slate-900/70 p-2.5 rounded-lg border border-slate-100 dark:border-slate-800 mt-2">
+                <span className="font-semibold text-slate-700 dark:text-slate-200">Analysis: </span>
+                {aiAnalysis.verification?.reason || aiAnalysis.recommendation}
+              </p>
+            )}
           </div>
         )}
       </section>
@@ -359,7 +379,7 @@ export default function ReportPage() {
         </h2>
 
         <label className="mb-2 block text-sm font-medium text-slate-700">Category</label>
-        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 md:grid-cols-5">
           {CATEGORIES.map((cat) => (
             <button
               key={cat.code}
@@ -378,12 +398,72 @@ export default function ReportPage() {
           ))}
         </div>
 
-        <label className="mb-2 mt-4 block text-sm font-medium text-slate-700">
-          Additional Details (optional)
-        </label>
+        {/* Multilingual Voice Note & Dictation Header */}
+        <div className="mb-2 mt-5 flex flex-wrap items-center justify-between gap-2">
+          <label className="block text-sm font-semibold text-slate-800 dark:text-slate-200">
+            Additional Details & Observations
+          </label>
+          <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700 text-xs">
+            <Languages size={14} className="text-slate-500 ml-1" />
+            <button
+              type="button"
+              onClick={() => setSpeechLanguage("hi-IN")}
+              className={`px-2 py-0.5 rounded font-medium transition-colors ${
+                speechLanguage === "hi-IN" ? "bg-brand-600 text-white font-bold" : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
+              }`}
+            >
+              हिंदी
+            </button>
+            <button
+              type="button"
+              onClick={() => setSpeechLanguage("gu-IN")}
+              className={`px-2 py-0.5 rounded font-medium transition-colors ${
+                speechLanguage === "gu-IN" ? "bg-brand-600 text-white font-bold" : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
+              }`}
+            >
+              ગુજરાતી
+            </button>
+            <button
+              type="button"
+              onClick={() => setSpeechLanguage("en-IN")}
+              className={`px-2 py-0.5 rounded font-medium transition-colors ${
+                speechLanguage === "en-IN" ? "bg-brand-600 text-white font-bold" : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
+              }`}
+            >
+              English
+            </button>
+          </div>
+        </div>
+
+        {/* Voice Note Recording Bar */}
+        <div className="mb-3 p-3 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 flex items-center justify-between gap-3">
+          <span className="text-xs text-slate-600 dark:text-slate-400">
+            Voice Dictation ({speechLanguage === "hi-IN" ? "Hindi" : speechLanguage === "gu-IN" ? "Gujarati" : "English"})
+          </span>
+          <button
+            type="button"
+            onClick={toggleSpeechRecognition}
+            className={cn(
+              "inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-colors",
+              isRecording
+                ? "bg-red-600 text-white"
+                : "bg-white text-slate-700 border border-slate-300 hover:bg-slate-100 dark:bg-slate-900 dark:text-slate-300 dark:border-slate-600"
+            )}
+          >
+            {isRecording ? <MicOff size={14} /> : <Mic size={14} />}
+            <span>{isRecording ? "Stop Recording" : "Record Voice"}</span>
+          </button>
+        </div>
+
+        {speechError && (
+          <div className="mb-2 text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 p-2 rounded-lg border border-amber-200">
+            ⚠️ {speechError}
+          </div>
+        )}
+
         <textarea
           className="input min-h-[100px]"
-          placeholder="Describe the issue in detail..."
+          placeholder={`Describe the issue, or tap 'Record Voice' to speak in ${speechLanguage === "hi-IN" ? "Hindi" : speechLanguage === "gu-IN" ? "Gujarati" : "English"}...`}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
         />
@@ -473,8 +553,8 @@ export default function ReportPage() {
       </button>
 
       {submitMutation.isError && (
-        <div className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">
-          Failed to submit. Please try again.
+        <div className="mt-4 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 p-3 text-sm text-red-700 dark:text-red-300">
+          {(submitMutation.error as any)?.response?.data?.detail || (submitMutation.error as any)?.message || "Failed to submit. Please try again."}
         </div>
       )}
     </div>

@@ -28,28 +28,10 @@ export function FeatureGrid() {
         "District officers get heatmaps, severity rankings, repair tracking, and AI-estimated repair costs.",
     },
     {
-      icon: "📱",
-      title: "Multi-Channel Access",
-      description:
-        "Report via web app, WhatsApp, SMS, or voice in 22 Indian languages. No smartphone required.",
-    },
-    {
       icon: "🔒",
       title: "Anonymous & Secure",
       description:
         "Report issues without revealing identity. JWT auth, RBAC, end-to-end encryption, and full audit trails.",
-    },
-    {
-      icon: "🔮",
-      title: "Predictive Analytics",
-      description:
-        "LightGBM models predict which schools will deteriorate — enabling preventive maintenance before complaints.",
-    },
-    {
-      icon: "🌐",
-      title: "Offline Support",
-      description:
-        "PWA with offline-first design. Capture reports without internet, auto-sync when connection returns.",
     },
   ];
 
@@ -65,7 +47,7 @@ export function FeatureGrid() {
           </p>
         </div>
 
-        <div className="mt-16 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-16 grid gap-8 sm:grid-cols-2 lg:grid-cols-5">
           {features.map((feature) => (
             <div
               key={feature.title}

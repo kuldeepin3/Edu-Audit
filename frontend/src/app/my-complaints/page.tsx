@@ -23,10 +23,7 @@ export default function MyComplaintsPage() {
       if (!user) return;
       try {
         const data = await api.listComplaints({ page: 1, page_size: 50 });
-        const userComplaints = (data.items || []).filter(
-          (c: any) => c.reporter_id === user.id || c.reporter?.id === user.id
-        );
-        setComplaints(userComplaints);
+        setComplaints(data.items || []);
       } catch (err) {
         console.error("Failed to load complaints:", err);
       } finally {

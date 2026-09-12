@@ -18,6 +18,14 @@ export interface User {
   is_verified: boolean;
 }
 
+export interface ComplaintImage {
+  id: string;
+  media_url: string;
+  thumbnail_url?: string;
+  is_primary?: boolean;
+  detection_results?: any[];
+}
+
 export interface Complaint {
   id: string;
   report_id: string;
@@ -30,9 +38,21 @@ export interface Complaint {
   description?: string;
   ai_analysis?: Record<string, unknown>;
   is_anonymous: boolean;
+  reporter_name?: string;
+  reporter_email?: string;
+  reporter_phone?: string;
+  images?: ComplaintImage[];
+  media_url?: string;
   created_at: string;
   updated_at?: string;
   resolved_at?: string;
+}
+
+export function getImageUrl(url?: string | null): string {
+  if (!url) return "";
+  if (url.startsWith("http://") || url.startsWith("https://")) return url;
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001";
+  return `${baseUrl.replace(/\/$/, "")}${url.startsWith("/") ? "" : "/"}${url}`;
 }
 
 export interface School {
@@ -68,18 +88,30 @@ export interface Citation {
 }
 
 export const CATEGORIES = [
-  { code: "I001", name: "Broken Toilet", icon: "🚽", severity: "critical" },
-  { code: "I002", name: "No Drinking Water", icon: "💧", severity: "critical" },
-  { code: "I003", name: "Unsafe Wiring", icon: "⚡", severity: "critical" },
-  { code: "I004", name: "Damaged Classroom", icon: "🏚️", severity: "high" },
-  { code: "I005", name: "Roof Leakage", icon: "🌧️", severity: "high" },
-  { code: "I006", name: "Broken Furniture", icon: "🪑", severity: "medium" },
-  { code: "I007", name: "Broken Windows/Doors", icon: "🪟", severity: "medium" },
-  { code: "I008", name: "Missing Ramps", icon: "♿", severity: "high" },
-  { code: "I009", name: "Sanitation Issues", icon: "🧹", severity: "critical" },
-  { code: "I010", name: "Boundary Wall Damage", icon: "🧱", severity: "high" },
-  { code: "I011", name: "Playground Hazards", icon: "⚽", severity: "medium" },
+  { code: "I001", name: "Washroom Damage", icon: "🚽", severity: "critical", model_class: "washroom_damage" },
+  { code: "I003", name: "Unsafe Wiring", icon: "⚡", severity: "critical", model_class: "unsafe_wiring" },
+  { code: "I004", name: "Damaged Walls / Cracks", icon: "🧱", severity: "high", model_class: "damaged_wall" },
+  { code: "I006", name: "Broken Furniture", icon: "🪑", severity: "medium", model_class: "broken_furniture" },
+  { code: "I007", name: "Broken Windows", icon: "🪟", severity: "medium", model_class: "broken_window_door" },
 ];
+
+// Single source of truth for translating model predictions into report categories
+export const MODEL_CLASS_TO_CATEGORY: Record<string, string> = {
+  washroom_damage: "I001",
+  unsafe_wiring: "I003",
+  damaged_wall: "I004",
+  broken_furniture: "I006",
+  broken_window_door: "I007",
+  broken_window: "I007",
+  broken_windows: "I007",
+  // Direct label matching
+  "Washroom Damage": "I001",
+  "Unsafe Wiring": "I003",
+  "Damaged Walls / Cracks": "I004",
+  "Damaged Walls/ Cracks": "I004",
+  "Broken Furniture": "I006",
+  "Broken Windows": "I007",
+};
 
 // ============================================================================
 // API CLIENT

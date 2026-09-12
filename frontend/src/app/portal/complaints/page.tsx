@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
-import { api } from "@/lib/api";
+import { api, getImageUrl } from "@/lib/api";
 import { 
   ClipboardList, 
   MapPin, 
@@ -22,7 +22,7 @@ import {
   Calendar
 } from "lucide-react";
 
-export default function AuditorComplaintsPage() {
+function AuditorComplaintsContent() {
   const { auditor } = useAuthStore();
   const searchParams = useSearchParams();
   const initialId = searchParams.get("id");
@@ -243,8 +243,14 @@ export default function AuditorComplaintsPage() {
                       </div>
                       <div className="flex items-center gap-2 text-sm text-slate-300">
                         <User size={16} className="text-slate-500" />
-                        <span>Reporter: {selectedComplaint.reporter?.name || "Citizen (Anonymous)"}</span>
+                        <span>Reporter: {selectedComplaint.is_anonymous ? "Citizen (Anonymous)" : (selectedComplaint.reporter_name || selectedComplaint.reporter?.name || "Citizen (Verified)")}</span>
                       </div>
+                      {!selectedComplaint.is_anonymous && (selectedComplaint.reporter_email || selectedComplaint.reporter_phone) && (
+                        <div className="pt-1 text-xs text-slate-400 space-y-1 border-t border-slate-800">
+                          {selectedComplaint.reporter_email && <div>✉️ Email: {selectedComplaint.reporter_email}</div>}
+                          {selectedComplaint.reporter_phone && <div>📞 Phone: {selectedComplaint.reporter_phone}</div>}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -264,11 +270,113 @@ export default function AuditorComplaintsPage() {
                 </div>
               </div>
 
+              {/* Submitted Evidence Photos Gallery */}
+              <div className="space-y-3">
+                <h4 className="text-sm font-semibold text-slate-300 flex items-center gap-2">
+                  <ImageIcon size={16} className="text-indigo-400" />
+                  Submitted Evidence Photos
+                </h4>
+                {selectedComplaint.images && selectedComplaint.images.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                    {selectedComplaint.images.map((img: any, idx: number) => {
+                      const fullUrl = getImageUrl(img.media_url || img.thumbnail_url);
+                      return (
+                        <div key={img.id || idx} className="relative group bg-slate-900 rounded-xl border border-slate-800 overflow-hidden">
+                          <img
+                            src={fullUrl}
+                            alt={`Evidence ${idx + 1}`}
+                            className="w-full h-48 object-cover rounded-xl transition-transform duration-300 group-hover:scale-105"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1580582932707-520aed937b7b?w=800&auto=format&fit=crop&q=60";
+                            }}
+                          />
+                          <div className="absolute inset-0 bg-slate-950/70 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-2">
+                            <a
+                              href={fullUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold shadow-lg"
+                            >
+                              Open Image ↗
+                            </a>
+                          </div>
+                          {img.is_primary && (
+                            <span className="absolute top-2 left-2 px-2 py-0.5 bg-indigo-950/90 text-indigo-300 text-[10px] font-bold rounded border border-indigo-800">
+                              Primary Evidence
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : selectedComplaint.media_url ? (
+                  <div className="relative group bg-slate-900 rounded-xl border border-slate-800 overflow-hidden max-w-md">
+                    <img
+                      src={getImageUrl(selectedComplaint.media_url)}
+                      alt="Evidence Photo"
+                      className="w-full h-56 object-cover rounded-xl"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1580582932707-520aed937b7b?w=800&auto=format&fit=crop&q=60";
+                      }}
+                    />
+                    <div className="p-3 bg-slate-950 border-t border-slate-800 flex justify-between items-center">
+                      <span className="text-xs text-slate-400">Uploaded Evidence Photo</span>
+                      <a
+                        href={getImageUrl(selectedComplaint.media_url)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-xs text-indigo-400 hover:underline font-semibold"
+                      >
+                        Open Full Image ↗
+                      </a>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-4 bg-slate-900/60 rounded-xl border border-slate-800 text-xs text-slate-500 italic">
+                    No evidence photos attached to this report.
+                  </div>
+                )}
+              </div>
+
               {/* Description */}
               <div className="space-y-2">
                 <h4 className="text-sm font-semibold text-slate-300">Detailed Complaint Description</h4>
                 <div className="p-4 bg-slate-900 rounded-xl border border-slate-800 text-sm text-slate-300 leading-relaxed">
                   {selectedComplaint.description || "No detailed description provided by the citizen."}
+                </div>
+              </div>
+
+              {/* GPS Geolocation & Map Inspector */}
+              <div className="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-3">
+                <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center justify-between">
+                  <span className="flex items-center gap-1.5"><MapPin size={14} className="text-rose-400" /> Exact Incident GPS Location</span>
+                  {selectedComplaint.latitude && selectedComplaint.longitude && (
+                    <a
+                      href={`https://www.google.com/maps?q=${selectedComplaint.latitude},${selectedComplaint.longitude}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-[11px] text-indigo-400 hover:underline font-semibold"
+                    >
+                      Open in Google Maps ↗
+                    </a>
+                  )}
+                </div>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 bg-slate-950 rounded-lg border border-slate-800/80">
+                  <div className="space-y-1">
+                    <div className="font-mono text-xs font-semibold text-slate-200">
+                      {selectedComplaint.gps_location || (selectedComplaint.latitude && selectedComplaint.longitude ? `${selectedComplaint.latitude.toFixed(6)}, ${selectedComplaint.longitude.toFixed(6)}` : "Location provided via school coordinates")}
+                    </div>
+                    <div className="text-[11px] text-slate-500">
+                      School: {selectedComplaint.school_name || "Primary School"} • District: {selectedComplaint.district || "Vadodara"}
+                    </div>
+                  </div>
+                  {selectedComplaint.latitude && selectedComplaint.longitude && (
+                    <div className="shrink-0">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold bg-rose-950/40 text-rose-300 border border-rose-800/60">
+                        <MapPin size={12} /> Pin Verified
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -345,5 +453,13 @@ export default function AuditorComplaintsPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function AuditorComplaintsPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-slate-500">Loading complaints...</div>}>
+      <AuditorComplaintsContent />
+    </Suspense>
   );
 }

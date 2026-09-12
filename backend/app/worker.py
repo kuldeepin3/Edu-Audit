@@ -138,8 +138,8 @@ async def analyze_complaint_images(self, complaint_id: str, image_urls: list):
             primary_result = None
 
             for img in images:
-                # Download and analyze image (simplified)
-                # In production: fetch from S3
+                # Download and analyze image (simplified).
+                # Production deployments read it from the mounted media volume.
                 detection = service.detect_placeholder()
                 img.detection_results = detection
                 all_detections.append(detection)

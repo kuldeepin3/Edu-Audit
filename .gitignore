@@ -61,6 +61,16 @@ cv_models/*
 logs/
 *.log
 
+# Local uploaded complaint evidence
+backend/uploads/
+
+# Datasets and training artifacts
+dataset/
+cv_pipeline/eduaudit_dataset/
+cv_pipeline/runs/
+runs/
+*.tsbuildinfo
+
 # OS
 .DS_Store
 Thumbs.db

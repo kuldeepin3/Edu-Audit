@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Search, Clock, ShieldCheck, AlertTriangle, FileText, CheckCircle2 } from "lucide-react";
 import { api } from "@/lib/api";
 import { statusConfig, severityColor, formatDate, timeAgo } from "@/lib/utils";
 
-export default function TrackMainPage() {
+function TrackContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const initialId = searchParams.get("id") || "";
@@ -184,5 +184,13 @@ export default function TrackMainPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function TrackMainPage() {
+  return (
+    <Suspense fallback={<div className="text-center py-12 text-slate-500">Loading...</div>}>
+      <TrackContent />
+    </Suspense>
   );
 }

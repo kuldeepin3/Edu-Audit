@@ -12,7 +12,7 @@ export function Footer() {
   return (
     <footer className="border-t border-slate-200 bg-slate-50 py-12 dark:border-slate-800 dark:bg-slate-950">
       <div className="mx-auto max-w-7xl px-4">
-        <div className="grid gap-8 md:grid-cols-4">
+        <div className="grid gap-8 md:grid-cols-3">
           <div>
             <h3 className="font-display text-lg font-bold text-slate-900 dark:text-white">
               EduAudit AI
@@ -34,16 +34,6 @@ export function Footer() {
           </div>
 
           <div>
-            <h4 className="font-semibold text-slate-900 dark:text-white">Channels</h4>
-            <ul className="mt-2 space-y-1 text-sm text-slate-600 dark:text-slate-400">
-              <li>📱 WhatsApp Bot</li>
-              <li>💬 SMS Reporting</li>
-              <li>🌐 Web App (PWA)</li>
-              <li>🗣️ Voice (22 languages)</li>
-            </ul>
-          </div>
-
-          <div>
             <h4 className="font-semibold text-slate-900 dark:text-white">Resources</h4>
             <ul className="mt-2 space-y-1 text-sm text-slate-600 dark:text-slate-400">
               <li>API Documentation</li>
@@ -56,10 +46,7 @@ export function Footer() {
 
         <div className="mt-8 border-t border-slate-200 pt-8 text-center text-sm text-slate-500 dark:border-slate-800">
           <p>
-            © 2026 EduAudit AI. Smart India Hackathon • GovTech Innovation.
-          </p>
-          <p className="mt-1">
-            Aligned with UN SDGs 4, 6, 9, 10, 11, 16 • DPDP Act 2023 Compliant
+            © 2026 EduAudit AI.
           </p>
         </div>
       </div>
