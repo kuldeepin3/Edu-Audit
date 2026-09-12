@@ -1,58 +1,80 @@
-/**
- * EduAudit AI - Landing Page Hero
- */
+"use client";
+
+import React from "react";
+import Link from "next/link";
+import { Camera, Search, ShieldCheck, MapPin, CheckCircle2, ArrowRight } from "lucide-react";
+
 export function Hero() {
   return (
-    <section className="relative overflow-hidden bg-gradient-to-b from-brand-50 to-white dark:from-slate-900 dark:to-slate-950">
-      <div className="absolute inset-0 bg-grid-slate-100 [mask-image:linear-gradient(0deg,white,rgba(255,255,255,0.6))] dark:bg-grid-slate-700/25" />
-      <div className="relative mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8 lg:py-28">
-        <div className="mx-auto max-w-3xl text-center">
-          {/* Badge */}
-          <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-brand-100 px-4 py-1.5 text-sm font-medium text-brand-700 dark:bg-brand-950 dark:text-brand-300">
-            <span className="flex h-2 w-2 rounded-full bg-brand-500" />
-            AI-Powered GovTech Platform
+    <section className="bg-white border-b border-slate-200">
+      <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:py-24">
+        <div className="mx-auto max-w-3xl text-center space-y-6">
+          {/* Institutional Badge */}
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-slate-200 bg-slate-50 text-[11px] font-semibold text-slate-700 tracking-wide uppercase">
+            <span className="h-1.5 w-1.5 rounded-full bg-slate-900" />
+            National School Infrastructure Audit & Grievance Cell
           </div>
 
-          {/* Heading */}
-          <h1 className="font-display text-4xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-5xl lg:text-6xl">
-            Every Citizen a{" "}
-            <span className="bg-gradient-to-r from-brand-600 to-brand-800 bg-clip-text text-transparent">
-              School Auditor
-            </span>
+          {/* Clean Headline */}
+          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-slate-900 font-sans leading-tight">
+            Citizen-Led Verification for Public School Infrastructure
           </h1>
 
-          {/* Subheading */}
-          <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-slate-600 dark:text-slate-300">
-            EduAudit AI uses computer vision, fraud detection, and AI chatbots
-            to monitor government school infrastructure. Report issues in seconds.
-            Track repairs to completion. Bring transparency to education.
+          {/* Subtitle */}
+          <p className="mx-auto max-w-2xl text-base sm:text-lg text-slate-600 leading-relaxed font-normal">
+            Directly report structural hazards, unsanitary washrooms, and unsafe electrical wiring in government schools. Track remediation from field submission to statutory work completion.
           </p>
 
-          {/* CTAs */}
-          <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
-            <a
+          {/* Minimalist Action Buttons */}
+          <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+            <Link
               href="/report"
-              className="btn-primary inline-flex h-12 items-center px-8 text-base"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-sm font-semibold shadow-sm transition-colors"
             >
-              📸 Report an Issue
-            </a>
-            <a
-              href="/dashboard"
-              className="btn-outline inline-flex h-12 items-center px-8 text-base"
+              <Camera size={16} />
+              <span>Report an Issue</span>
+            </Link>
+            <Link
+              href="/track"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 rounded-lg text-sm font-semibold transition-colors"
             >
-              📊 View Dashboard
-            </a>
+              <Search size={16} />
+              <span>Track Report Status</span>
+            </Link>
           </div>
 
-          {/* Trust indicators */}
-          <div className="mt-12 flex flex-wrap items-center justify-center gap-x-8 gap-y-4 text-sm text-slate-500">
-            <div className="flex items-center gap-2">
-              <span className="text-xl">🤖</span>
-              <span>AI-Powered Detection</span>
+          {/* Institutional Quality Badges */}
+          <div className="pt-8 border-t border-slate-100 grid grid-cols-2 sm:grid-cols-4 gap-4 text-left">
+            <div className="p-3 rounded-lg border border-slate-100 bg-slate-50/50">
+              <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                <CheckCircle2 size={13} className="text-emerald-600" />
+                <span>RTE Section 19</span>
+              </div>
+              <p className="text-[11px] text-slate-500 mt-0.5">Statutory safety compliance</p>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xl">🔒</span>
-              <span>Anonymous Reporting</span>
+
+            <div className="p-3 rounded-lg border border-slate-100 bg-slate-50/50">
+              <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                <ShieldCheck size={13} className="text-blue-600" />
+                <span>UDISE Directory</span>
+              </div>
+              <p className="text-[11px] text-slate-500 mt-0.5">All 10.5L+ public schools</p>
+            </div>
+
+            <div className="p-3 rounded-lg border border-slate-100 bg-slate-50/50">
+              <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                <MapPin size={13} className="text-amber-600" />
+                <span>Geo-Tagged</span>
+              </div>
+              <p className="text-[11px] text-slate-500 mt-0.5">Tamper-proof evidence</p>
+            </div>
+
+            <div className="p-3 rounded-lg border border-slate-100 bg-slate-50/50">
+              <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                <ArrowRight size={13} className="text-slate-700" />
+                <span>Direct to DEO</span>
+              </div>
+              <p className="text-[11px] text-slate-500 mt-0.5">Official work order release</p>
             </div>
           </div>
         </div>

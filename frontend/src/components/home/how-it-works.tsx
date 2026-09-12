@@ -1,82 +1,82 @@
-/**
- * EduAudit AI - How It Works Section
- */
+"use client";
+
+import React from "react";
+import { Camera, Cpu, ClipboardCheck, CheckCircle2 } from "lucide-react";
+
 export function HowItWorks() {
   const steps = [
     {
-      number: "01",
-      icon: "📸",
-      title: "Capture & Report",
+      step: "Step 01",
+      icon: Camera,
+      title: "Field Evidence Submission",
       description:
-        "Citizens photograph infrastructure issues via the web app. Choose category, add GPS, submit in seconds.",
+        "Citizen or school staff uploads clear photographic evidence with GPS location and the 11-digit UDISE school code.",
     },
     {
-      number: "02",
-      icon: "🤖",
-      title: "AI Verification",
+      step: "Step 02",
+      icon: Cpu,
+      title: "Automated Defect Analysis",
       description:
-        "YOLOv11 analyzes images, detects defect type, calculates severity score, and generates a structured auto-report.",
+        "Computer vision classifies the defect across the 5 canonical domains, flags urgency level, and checks against duplicate logs.",
     },
     {
-      number: "03",
-      icon: "🏛️",
-      title: "Authority Action",
+      step: "Step 03",
+      icon: ClipboardCheck,
+      title: "District Officer Verification",
       description:
-        "District officers see prioritized complaints on dashboards with heatmaps, cost estimates, and SLA tracking.",
+        "Assigned District Education Officer (DEO) audits the report, verifies contractor repair estimates, and authorizes work orders.",
     },
     {
-      number: "04",
-      icon: "🔧",
-      title: "Repair & Track",
+      step: "Step 04",
+      icon: CheckCircle2,
+      title: "Certified Completion & Archive",
       description:
-        "Contractors are assigned, work begins, and citizens receive real-time status updates until resolution.",
-    },
-    {
-      number: "05",
-      icon: "✅",
-      title: "Verified Completion",
-      description:
-        "Post-repair photos confirm the fix. School health scores update. The cycle of accountability continues.",
+        "Post-repair inspection generates a statutory completion certificate, updates the school quality score, and closes the ticket.",
     },
   ];
 
   return (
-    <section className="bg-slate-50 py-20 dark:bg-slate-900">
-      <div className="mx-auto max-w-7xl px-4">
-        <div className="mx-auto max-w-2xl text-center">
-          <h2 className="font-display text-3xl font-bold text-slate-900 dark:text-white sm:text-4xl">
-            How It Works
+    <section className="py-16 sm:py-20 bg-white border-b border-slate-200">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6">
+        <div className="mx-auto max-w-2xl text-center space-y-2">
+          <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+            End-to-End Remediation Lifecycle
+          </div>
+          <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 font-sans tracking-tight">
+            How EduAudit Operates
           </h2>
-          <p className="mt-4 text-lg text-slate-600 dark:text-slate-300">
-            From photo to repaired school — a transparent, AI-powered journey.
+          <p className="text-xs sm:text-sm text-slate-600 leading-relaxed max-w-lg mx-auto">
+            A transparent four-stage pipeline connecting citizen reports directly to verified public works execution.
           </p>
         </div>
 
-        <div className="mt-16 grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-          {steps.map((step, idx) => (
-            <div key={step.number} className="relative">
-              <div className="card h-full">
-                <div className="flex items-start justify-between">
-                  <span className="text-4xl">{step.icon}</span>
-                  <span className="font-display text-5xl font-bold text-slate-100 dark:text-slate-800">
-                    {step.number}
-                  </span>
+        <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          {steps.map((item) => {
+            const Icon = item.icon;
+            return (
+              <div
+                key={item.step}
+                className="bg-slate-50/60 p-5 rounded-lg border border-slate-200 flex flex-col justify-between space-y-3"
+              >
+                <div className="space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                      {item.step}
+                    </span>
+                    <div className="p-1.5 bg-white border border-slate-200 text-slate-700 rounded">
+                      <Icon size={15} />
+                    </div>
+                  </div>
+                  <h3 className="text-xs font-bold text-slate-900">
+                    {item.title}
+                  </h3>
+                  <p className="text-[11px] text-slate-600 leading-relaxed">
+                    {item.description}
+                  </p>
                 </div>
-                <h3 className="mt-4 font-display text-lg font-semibold text-slate-900 dark:text-white">
-                  {step.title}
-                </h3>
-                <p className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-400">
-                  {step.description}
-                </p>
               </div>
-              {/* Connector arrow (except last) */}
-              {idx < steps.length - 1 && idx % 3 !== 2 && (
-                <div className="absolute -right-4 top-1/2 hidden -translate-y-1/2 text-slate-300 lg:block">
-                  →
-                </div>
-              )}
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </section>

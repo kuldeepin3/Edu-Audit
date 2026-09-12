@@ -1,67 +1,97 @@
-/**
- * EduAudit AI - Feature Grid Section
- */
+"use client";
+
+import React from "react";
+import { Droplets, Zap, Building2, Boxes, AppWindow } from "lucide-react";
+
 export function FeatureGrid() {
-  const features = [
+  const categories = [
     {
-      icon: "🤖",
-      title: "AI-Powered Detection",
+      code: "01",
+      icon: Droplets,
+      title: "Washroom & Sanitation",
+      compliance: "RTE Norms Schedule II",
       description:
-        "YOLOv11 computer vision automatically identifies broken toilets, roof leaks, unsafe wiring, and more from your photos.",
+        "Monitoring functional running water, student toilet blocks, drainage blockages, and sanitation maintenance.",
     },
     {
-      icon: "🛡️",
-      title: "Fraud Prevention",
+      code: "02",
+      icon: Zap,
+      title: "Unsafe Wiring & Electrical",
+      compliance: "NBC Part 8 Electrical Safety",
       description:
-        "Perceptual hashing and CLIP embeddings detect duplicate uploads, edited images, and spam — keeping data trustworthy.",
+        "Inspection of exposed high-voltage wiring, dangling cables, damaged main switchboards, and classroom shock hazards.",
     },
     {
-      icon: "💬",
-      title: "AI Chatbot",
+      code: "03",
+      icon: Building2,
+      title: "Walls, Masonry & Plaster",
+      compliance: "IS 1893 Structural Norms",
       description:
-        "Ask questions in natural language. Get evidence-backed answers about school infrastructure across districts.",
+        "Detection of structural shear cracks, deep masonry fractures, ceiling water seepage, and staircase stability.",
     },
     {
-      icon: "📊",
-      title: "Authority Dashboard",
+      code: "04",
+      icon: Boxes,
+      title: "Classroom Furniture",
+      compliance: "Samagra Shiksha Norms",
       description:
-        "District officers get heatmaps, severity rankings, repair tracking, and AI-estimated repair costs.",
+        "Verification of student dual-desk benches, study chairs, broken tabletops, and replacement of sharp splintered wood.",
     },
     {
-      icon: "🔒",
-      title: "Anonymous & Secure",
+      code: "05",
+      icon: AppWindow,
+      title: "Windows, Doors & Enclosures",
+      compliance: "NBC Building Protection",
       description:
-        "Report issues without revealing identity. JWT auth, RBAC, end-to-end encryption, and full audit trails.",
+        "Verification of shattered glass panes, missing ventilation window grills, broken door latches, and security enclosures.",
     },
   ];
 
   return (
-    <section className="py-20">
-      <div className="mx-auto max-w-7xl px-4">
-        <div className="mx-auto max-w-2xl text-center">
-          <h2 className="font-display text-3xl font-bold text-slate-900 dark:text-white sm:text-4xl">
-            Built for Scale, Designed for Impact
+    <section className="py-16 sm:py-20 bg-slate-50 border-b border-slate-200">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6">
+        <div className="mx-auto max-w-2xl text-center space-y-2">
+          <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+            Statutory Scope of Inspection
+          </div>
+          <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 font-sans tracking-tight">
+            5 Core Infrastructure Domains
           </h2>
-          <p className="mt-4 text-lg text-slate-600 dark:text-slate-300">
-            Production-ready architecture combining AI, transparency, and citizen empowerment.
+          <p className="text-xs sm:text-sm text-slate-600 leading-relaxed max-w-lg mx-auto">
+            Every submitted grievance and field audit report is categorized across these 5 canonical physical safety standards.
           </p>
         </div>
 
-        <div className="mt-16 grid gap-8 sm:grid-cols-2 lg:grid-cols-5">
-          {features.map((feature) => (
-            <div
-              key={feature.title}
-              className="card group transition-all hover:-translate-y-1 hover:shadow-lg"
-            >
-              <div className="text-4xl">{feature.icon}</div>
-              <h3 className="mt-4 font-display text-lg font-semibold text-slate-900 dark:text-white">
-                {feature.title}
-              </h3>
-              <p className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-400">
-                {feature.description}
-              </p>
-            </div>
-          ))}
+        <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          {categories.map((cat) => {
+            const Icon = cat.icon;
+            return (
+              <div
+                key={cat.title}
+                className="bg-white p-4 rounded-lg border border-slate-200 flex flex-col justify-between space-y-3 shadow-none"
+              >
+                <div className="space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <div className="p-2 bg-slate-100 text-slate-800 rounded-md">
+                      <Icon size={16} />
+                    </div>
+                    <span className="font-mono text-[10px] font-bold text-slate-400">
+                      CLASS {cat.code}
+                    </span>
+                  </div>
+                  <h3 className="text-xs font-bold text-slate-900 leading-snug">
+                    {cat.title}
+                  </h3>
+                  <div className="text-[10px] font-medium text-slate-500">
+                    {cat.compliance}
+                  </div>
+                  <p className="text-[11px] text-slate-600 leading-relaxed">
+                    {cat.description}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
     </section>
