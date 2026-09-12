@@ -12,7 +12,8 @@ import {
   ChevronRight, 
   Printer, 
   RotateCcw,
-  Search
+  Search,
+  UserCheck
 } from "lucide-react";
 
 export default function AuditorReportsPage() {
@@ -21,6 +22,22 @@ export default function AuditorReportsPage() {
   const [schools, setSchools] = useState<School[]>([]);
   const [selectedSchool, setSelectedSchool] = useState<School | null>(null);
   const [isSearching, setIsSearching] = useState(false);
+
+  // Auditor Credentials (customizable)
+  const [auditorNameInput, setAuditorNameInput] = useState(user?.name || auditor?.name || "");
+  const [auditorDesignationInput, setAuditorDesignationInput] = useState("DEO Infrastructure Auditor");
+  const [auditorIdInput, setAuditorIdInput] = useState(
+    auditor?.id ? auditor.id.slice(0, 8).toUpperCase() : "AUD-7821-GJ"
+  );
+
+  useEffect(() => {
+    if (!auditorNameInput && (user?.name || auditor?.name)) {
+      setAuditorNameInput(user?.name || auditor?.name || "");
+    }
+    if (auditor?.id) {
+      setAuditorIdInput(auditor.id.slice(0, 8).toUpperCase());
+    }
+  }, [user, auditor]);
 
   // 5 Canonical Classes Audit Scores (0 - 100) & Observations
   const [washroomScore, setWashroomScore] = useState(85);
@@ -90,6 +107,9 @@ export default function AuditorReportsPage() {
       const certId = `EDU-INSP/${districtCode}/${year}/${randomNum}`;
 
       const { grade, status } = getGrade(overallAverage);
+      const finalAuditorName = auditorNameInput.trim() || user?.name || auditor?.name || "Official Field Auditor";
+      const finalAuditorDesignation = auditorDesignationInput.trim() || "Field Infrastructure Auditor";
+      const finalAuditorId = auditorIdInput.trim() || (auditor?.id ? auditor.id.slice(0, 8).toUpperCase() : "AUD-7821-GJ");
 
       const reportData = {
         certId,
@@ -102,8 +122,9 @@ export default function AuditorReportsPage() {
           month: "short",
           year: "numeric"
         }),
-        auditorName: user?.name || auditor?.name || "K. V. Sharma (DEO Field Auditor)",
-        auditorId: auditor?.id ? auditor.id.slice(0, 8).toUpperCase() : "AUD-7821-GJ",
+        auditorName: finalAuditorName,
+        auditorDesignation: finalAuditorDesignation,
+        auditorId: finalAuditorId,
         overallScore: overallAverage,
         grade,
         statusText: status,
@@ -159,9 +180,40 @@ export default function AuditorReportsPage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8 pb-16">
+    <div className="max-w-4xl mx-auto space-y-8 pb-16 print:p-0 print:m-0 print:max-w-none">
+      {/* Dedicated Print Media Styling to Guarantee Single A4 Page without cutoff */}
+      <style>{`
+        @media print {
+          @page {
+            size: A4 portrait;
+            margin: 8mm 10mm;
+          }
+          html, body {
+            background: #ffffff !important;
+            color: #0f172a !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          nav, aside, header, footer, .no-print {
+            display: none !important;
+          }
+          #print-certificate {
+            width: 100% !important;
+            max-width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            border: none !important;
+            box-shadow: none !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+          }
+        }
+      `}</style>
+
       {/* Header */}
-      <div>
+      <div className="print:hidden">
         <h1 className="font-display text-2xl md:text-3xl font-bold text-slate-900 dark:text-white">
           Generate Inspection Report
         </h1>
@@ -174,9 +226,9 @@ export default function AuditorReportsPage() {
         /* ========================================================================= */
         /* AUTHENTIC GOVERNMENT INSPECTION CERTIFICATE (MINIMALIST & CLEAN)          */
         /* ========================================================================= */
-        <div className="space-y-6 animate-fadeIn">
+        <div className="space-y-6 print:space-y-0 animate-fadeIn">
           {/* Action Toolbar */}
-          <div className="flex flex-wrap items-center justify-between gap-3 p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm">
+          <div className="print:hidden flex flex-wrap items-center justify-between gap-3 p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm">
             <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
               <CheckCircle size={20} />
               <span className="text-sm font-semibold">Inspection Certificate Generated & Cryptographically Registered</span>
@@ -184,14 +236,14 @@ export default function AuditorReportsPage() {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => window.print()}
-                className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-900 rounded-lg text-xs font-semibold shadow-sm transition-all"
+                className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-900 rounded-lg text-xs font-semibold shadow-sm transition-all cursor-pointer"
               >
                 <Printer size={14} />
                 Print Certificate (PDF)
               </button>
               <button
                 onClick={handleReset}
-                className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-semibold transition-all"
+                className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-semibold transition-all cursor-pointer"
               >
                 <RotateCcw size={14} />
                 New Inspection
@@ -199,30 +251,30 @@ export default function AuditorReportsPage() {
             </div>
           </div>
 
-          {/* OFFICIAL CERTIFICATE SHEET (A4 Print Layout) */}
+          {/* OFFICIAL CERTIFICATE SHEET (Optimized for Single-Page A4 Print) */}
           <div 
             id="print-certificate" 
-            className="bg-white text-slate-900 p-8 md:p-12 rounded-xl border border-slate-300 shadow-md font-sans space-y-6 print:border-none print:shadow-none print:p-0"
+            className="bg-white text-slate-900 p-6 md:p-8 rounded-xl border border-slate-300 shadow-md font-sans space-y-4 print:border-none print:shadow-none print:p-0 print:m-0"
           >
             {/* Government Official Header */}
-            <div className="text-center border-b-2 border-slate-900 pb-5 space-y-1">
-              <div className="text-[11px] font-bold tracking-widest text-slate-600 uppercase">
+            <div className="text-center border-b-2 border-slate-900 pb-3 space-y-0.5">
+              <div className="text-[10px] font-bold tracking-widest text-slate-600 uppercase">
                 Government of India • Ministry of Education
               </div>
-              <div className="text-lg md:text-xl font-serif font-bold tracking-tight text-slate-900 uppercase">
+              <div className="text-base md:text-lg font-serif font-bold tracking-tight text-slate-900 uppercase">
                 Samagra Shiksha Infrastructure Audit Authority
               </div>
-              <div className="text-[12px] font-medium text-slate-700 tracking-wide">
+              <div className="text-[11px] font-medium text-slate-700 tracking-wide">
                 STATUTORY SCHOOL INFRASTRUCTURE INSPECTION & WORK COMPLETION CERTIFICATE
               </div>
-              <div className="pt-2 flex justify-between items-center text-[10px] text-slate-500 font-mono">
+              <div className="pt-1.5 flex justify-between items-center text-[10px] text-slate-500 font-mono">
                 <span>CERT NO: {successReport.certId}</span>
                 <span>AUDIT DATE: {successReport.inspectionDate}</span>
               </div>
             </div>
 
             {/* School & Auditor Details Table */}
-            <div className="grid grid-cols-2 gap-4 text-xs border border-slate-200 rounded-lg p-3.5 bg-slate-50/50">
+            <div className="grid grid-cols-2 gap-4 text-xs border border-slate-200 rounded-lg p-3 bg-slate-50/60">
               <div className="space-y-1">
                 <div>
                   <span className="text-slate-500 font-medium">Institution: </span>
@@ -244,43 +296,43 @@ export default function AuditorReportsPage() {
                   <span className="font-bold text-slate-900">{successReport.auditorName}</span>
                 </div>
                 <div>
-                  <span className="text-slate-500 font-medium">Auditor ID: </span>
-                  <span className="font-mono font-semibold text-slate-800">{successReport.auditorId}</span>
+                  <span className="text-slate-500 font-medium">Designation / Role: </span>
+                  <span className="text-slate-800">{successReport.auditorDesignation}</span>
                 </div>
                 <div>
-                  <span className="text-slate-500 font-medium">Audit Protocol: </span>
-                  <span className="text-slate-800">RTE Act 2009 & NBC Safety Norms</span>
+                  <span className="text-slate-500 font-medium">Auditor ID: </span>
+                  <span className="font-mono font-semibold text-slate-800">{successReport.auditorId}</span>
                 </div>
               </div>
             </div>
 
             {/* Assessment Grid - 5 Core Classes */}
-            <div className="space-y-2">
-              <div className="text-[11px] font-bold uppercase tracking-wider text-slate-700">
+            <div className="space-y-1.5">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-700">
                 1. Domain-Specific Physical Evaluation (5 Core Classes)
               </div>
               
               <div className="border border-slate-200 rounded-lg overflow-hidden">
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
-                    <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-700 font-semibold">
-                      <th className="py-2.5 px-3 w-1/3">Infrastructure Category</th>
-                      <th className="py-2.5 px-2 text-center w-16">Score</th>
-                      <th className="py-2.5 px-3 text-center w-32">Status</th>
-                      <th className="py-2.5 px-3">Field Verification Notes</th>
+                    <tr className="bg-slate-100/80 border-b border-slate-200 text-slate-700 font-semibold text-[11px]">
+                      <th className="py-2 px-3 w-1/3">Infrastructure Category</th>
+                      <th className="py-2 px-2 text-center w-16">Score</th>
+                      <th className="py-2 px-3 text-center w-28">Status</th>
+                      <th className="py-2 px-3">Field Verification Notes</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 text-slate-800">
+                  <tbody className="divide-y divide-slate-100 text-slate-800 text-[11px]">
                     {successReport.categories.map((cat: any, i: number) => (
                       <tr key={cat.code} className={i % 2 === 1 ? "bg-slate-50/40" : ""}>
-                        <td className="py-2.5 px-3 font-semibold text-slate-900">
+                        <td className="py-1.5 px-3 font-semibold text-slate-900">
                           {cat.name}
                         </td>
-                        <td className="py-2.5 px-2 text-center font-mono font-bold">
+                        <td className="py-1.5 px-2 text-center font-mono font-bold">
                           {cat.score}%
                         </td>
-                        <td className="py-2.5 px-3 text-center">
-                          <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                        <td className="py-1.5 px-3 text-center">
+                          <span className={`inline-block px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${
                             cat.score >= 80 
                               ? "bg-emerald-100 text-emerald-800 border border-emerald-200" 
                               : cat.score >= 70 
@@ -290,7 +342,7 @@ export default function AuditorReportsPage() {
                             {cat.status}
                           </span>
                         </td>
-                        <td className="py-2.5 px-3 text-slate-600 text-[11px] leading-relaxed">
+                        <td className="py-1.5 px-3 text-slate-600 text-[10px] leading-snug">
                           {cat.notes}
                         </td>
                       </tr>
@@ -301,28 +353,28 @@ export default function AuditorReportsPage() {
             </div>
 
             {/* Overall Health Index & Assessment */}
-            <div className="border border-slate-200 rounded-lg p-4 bg-slate-50/40 flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div className="space-y-1 text-center sm:text-left">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
+            <div className="border border-slate-200 rounded-lg p-3 bg-slate-50/40 flex items-center justify-between gap-4">
+              <div className="space-y-0.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">
                   Cumulative Infrastructure Quality Index (IQI)
                 </span>
-                <div className="text-2xl font-bold text-slate-900 flex items-center gap-2 justify-center sm:justify-start">
+                <div className="text-xl font-bold text-slate-900 flex items-center gap-2">
                   <span>{successReport.overallScore} / 100</span>
                   <span className="text-xs font-semibold px-2 py-0.5 rounded bg-slate-200 text-slate-800">
                     {successReport.statusText}
                   </span>
                 </div>
-                <p className="text-[11px] text-slate-500">
+                <p className="text-[10px] text-slate-500">
                   Standardized composite score across sanitation, electrical safety, masonry, classroom furniture, and building enclosure.
                 </p>
               </div>
 
-              <div className="flex items-center gap-3 shrink-0 border-t sm:border-t-0 sm:border-l border-slate-200 pt-3 sm:pt-0 sm:pl-5">
+              <div className="flex items-center gap-3 shrink-0 border-l border-slate-200 pl-4">
                 <div className="text-right hidden sm:block">
-                  <span className="text-[10px] text-slate-400 font-bold uppercase block">Statutory</span>
+                  <span className="text-[9px] text-slate-400 font-bold uppercase block">Statutory</span>
                   <span className="text-xs font-bold text-slate-700">Final Grade</span>
                 </div>
-                <div className="h-14 w-14 rounded-lg bg-slate-900 text-white flex flex-col items-center justify-center font-display font-black text-2xl shadow-sm">
+                <div className="h-12 w-12 rounded-lg bg-slate-900 text-white flex flex-col items-center justify-center font-display font-black text-xl shadow-sm">
                   <span>{successReport.grade}</span>
                 </div>
               </div>
@@ -330,43 +382,47 @@ export default function AuditorReportsPage() {
 
             {/* Auditor Remarks */}
             <div className="space-y-1">
-              <div className="text-[11px] font-bold uppercase tracking-wider text-slate-700">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-700">
                 2. Statutory Auditor Observations & Fund Release Recommendation
               </div>
-              <p className="text-xs text-slate-700 bg-white border border-slate-200 rounded-lg p-3 leading-relaxed">
+              <p className="text-[11px] text-slate-700 bg-white border border-slate-200 rounded-lg p-2.5 leading-relaxed">
                 {successReport.comments}
               </p>
             </div>
 
             {/* Legal Certification Statement */}
-            <div className="text-[10px] text-slate-500 leading-relaxed italic border-t border-slate-200 pt-3">
+            <div className="text-[9px] text-slate-500 leading-tight italic border-t border-slate-200 pt-2">
               {"\"This certificate serves as statutory confirmation that an authorized physical audit of the aforementioned school was performed. Findings are synchronized with the central EduAudit monitoring repository and qualify for institutional compliance archives under Section 19 of the Right of Children to Free and Compulsory Education Act.\""}
             </div>
 
-            {/* Official Sign-off & Stamps Block */}
-            <div className="pt-6 grid grid-cols-3 gap-4 text-center items-end text-xs border-t border-slate-200">
-              <div className="space-y-1">
-                <div className="h-10 border-b border-dashed border-slate-300 flex items-end justify-center pb-1">
-                  <span className="font-serif italic font-semibold text-slate-700">K. V. Sharma</span>
+            {/* Clean Official Verification Footer (No fake seals/stamps, clean minimalist layout) */}
+            <div className="pt-3 border-t border-slate-300 flex items-end justify-between text-xs">
+              <div className="space-y-0.5">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                  Authorized Inspecting Officer
                 </div>
-                <div className="font-bold text-slate-800 text-[11px]">Field Auditor Signature</div>
-                <div className="text-[10px] text-slate-400">DEO Infrastructure Cell</div>
+                <div className="text-sm font-bold text-slate-900">
+                  {successReport.auditorName}
+                </div>
+                <div className="text-[11px] text-slate-600">
+                  {successReport.auditorDesignation} • ID: {successReport.auditorId}
+                </div>
+                <div className="text-[10px] text-slate-400 font-mono">
+                  Verified Date: {successReport.inspectionDate}
+                </div>
               </div>
 
-              <div className="flex flex-col items-center justify-center space-y-1">
-                <div className="w-16 h-16 border-2 border-dashed border-slate-300 rounded-full flex flex-col items-center justify-center p-1 text-[8px] text-slate-400 uppercase font-bold text-center leading-tight">
-                  <span>Govt. Seal</span>
-                  <span>Verified</span>
+              <div className="text-right space-y-1">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                  Audit Verification Status
                 </div>
-                <span className="text-[9px] font-mono text-slate-400">DIGITAL HASH VERIFIED</span>
-              </div>
-
-              <div className="space-y-1">
-                <div className="h-10 border-b border-dashed border-slate-300 flex items-end justify-center pb-1">
-                  <span className="text-slate-400 text-[11px] italic">Institutional Seal</span>
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-slate-100 border border-slate-300 text-[11px] font-semibold text-slate-800">
+                  <CheckCircle size={13} className="text-emerald-600" />
+                  Statutory Infrastructure Record
                 </div>
-                <div className="font-bold text-slate-800 text-[11px]">Principal / Headmaster</div>
-                <div className="text-[10px] text-slate-400">School Verification</div>
+                <div className="text-[10px] text-slate-400 font-mono">
+                  Ref: {successReport.certId}
+                </div>
               </div>
             </div>
           </div>
@@ -396,7 +452,7 @@ export default function AuditorReportsPage() {
                 <button
                   type="button"
                   onClick={() => setSelectedSchool(null)}
-                  className="text-xs font-semibold text-rose-600 hover:text-rose-700 dark:text-rose-400 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800"
+                  className="text-xs font-semibold text-rose-600 hover:text-rose-700 dark:text-rose-400 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 cursor-pointer"
                 >
                   Change School
                 </button>
@@ -425,7 +481,7 @@ export default function AuditorReportsPage() {
                         key={s.id}
                         type="button"
                         onClick={() => setSelectedSchool(s)}
-                        className="w-full text-left px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-700/50 text-xs flex items-center justify-between transition-colors"
+                        className="w-full text-left px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-700/50 text-xs flex items-center justify-between transition-colors cursor-pointer"
                       >
                         <div>
                           <div className="font-semibold text-slate-800 dark:text-slate-200">{s.name}</div>
@@ -440,14 +496,54 @@ export default function AuditorReportsPage() {
             )}
           </div>
 
-          {/* Step 2: Evaluation Across the 5 Classes */}
+          {/* Form when School is Selected */}
           {selectedSchool && (
             <form onSubmit={handleGenerateReport} className="space-y-8 animate-fadeIn">
+              {/* Step 2: Auditor / Inspecting Officer Details */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 font-display text-base font-bold text-slate-900 dark:text-white">
+                  <UserCheck size={18} className="text-brand-600 dark:text-brand-400" />
+                  <span>2. Inspecting Officer / Auditor Details</span>
+                </div>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                      Auditor / Inspector Full Name <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={auditorNameInput}
+                      onChange={(e) => setAuditorNameInput(e.target.value)}
+                      placeholder="e.g. Ramesh Patel / Inspector Name"
+                      className="w-full text-xs p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    />
+                    <p className="text-[11px] text-slate-400">This name will appear on the official certificate and PDF.</p>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                      Designation / Department
+                    </label>
+                    <input
+                      type="text"
+                      value={auditorDesignationInput}
+                      onChange={(e) => setAuditorDesignationInput(e.target.value)}
+                      placeholder="e.g. DEO Infrastructure Auditor"
+                      className="w-full text-xs p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    />
+                    <p className="text-[11px] text-slate-400">Department or statutory auditing cell designation.</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Step 3: Evaluation Across the 5 Classes */}
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 font-display text-base font-bold text-slate-900 dark:text-white">
                     <CheckSquare size={18} className="text-brand-600 dark:text-brand-400" />
-                    <span>2. Physical Assessment Across 5 Core Classes</span>
+                    <span>3. Physical Assessment Across 5 Core Classes</span>
                   </div>
                   <div className="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
                     Average Score: <span className="text-brand-600 dark:text-brand-400 font-bold">{overallAverage}%</span> (Grade {getGrade(overallAverage).grade})
@@ -572,11 +668,11 @@ export default function AuditorReportsPage() {
                 </div>
               </div>
 
-              {/* Step 3: Formal Recommendations */}
+              {/* Step 4: Formal Recommendations */}
               <div className="space-y-2">
                 <div className="flex items-center gap-2 font-display text-base font-bold text-slate-900 dark:text-white">
                   <Sparkles size={18} className="text-brand-600 dark:text-brand-400" />
-                  <span>3. Statutory Audit Remarks & Fund Recommendation</span>
+                  <span>4. Statutory Audit Remarks & Fund Recommendation</span>
                 </div>
                 <textarea
                   placeholder="Enter formal remediation status, contractor work completion notes, or budget release recommendation..."

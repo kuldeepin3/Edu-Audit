@@ -39,9 +39,9 @@ export default function AuditorLayout({
   ];
 
   return (
-    <div className="min-h-screen flex bg-slate-900 text-white transition-colors duration-200">
+    <div className="min-h-screen flex bg-slate-900 text-white transition-colors duration-200 print:bg-white print:text-black">
       {/* Sidebar */}
-      <aside className="w-64 border-r border-slate-800 bg-slate-950 flex flex-col justify-between p-6 shrink-0">
+      <aside className="w-64 border-r border-slate-800 bg-slate-950 flex flex-col justify-between p-6 shrink-0 print:hidden">
         <div className="space-y-8">
           {/* Logo */}
           <div className="flex items-center gap-2">
@@ -96,7 +96,7 @@ export default function AuditorLayout({
       </aside>
 
       {/* Main Content Pane */}
-      <main className="flex-1 overflow-y-auto p-8 bg-slate-900">
+      <main className="flex-1 overflow-y-auto p-8 bg-slate-900 print:p-0 print:m-0 print:overflow-visible print:bg-white print:w-full">
         {children}
       </main>
     </div>
