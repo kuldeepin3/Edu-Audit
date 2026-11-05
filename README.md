@@ -28,16 +28,12 @@
 
 ## ✨ Key Features
 
-- 🤖 **AI-Powered Detection** — YOLOv11-Nano identifies 10 infrastructure defect types from photos
+- 🤖 **AI-Powered Detection** — YOLOv11-Nano identifies 5 infrastructure defect types from photos
 - 🛡️ **Fraud Prevention** — Perceptual hashing + CLIP embeddings detect duplicates, edits, and spam
 - 💬 **RAG Chatbot** — Ask questions in natural language, get evidence-backed answers with citations
 - 📊 **Authority Dashboard** — Heatmaps, severity rankings, repair tracking, cost estimation
-- 🔮 **Predictive Analytics** — LightGBM predicts school deterioration before it happens
-- 📱 **Multi-Channel** — Web, PWA, WhatsApp bot, SMS, voice (22 Indian languages)
 - 🔒 **Anonymous Reporting** — JWT + RBAC with anonymous submission support
-- 🌐 **Offline-First** — PWA captures reports without internet, auto-syncs when online
-- 🏆 **Gamification** — Badges, leaderboards, reputation scores for citizen engagement
-
+  
 ---
 
 ## 🏗️ Architecture
