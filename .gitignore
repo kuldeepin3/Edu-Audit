@@ -49,13 +49,12 @@ Thumbs.db
 # Docker
 docker/data/
 
-# Models (large files)
-*.pt
+# Models (pretrained base downloads ignored, trained weights tracked)
+yolo11n.pt
+cv_pipeline/yolo11n.pt
 *.onnx
 *.tflite
 *.mlmodel
-cv_models/*
-!cv_models/.gitkeep
 
 # Logs
 logs/
